@@ -1,0 +1,4 @@
+- [x] Port the uploaded security dashboard into the app's home page and adapt its styling.
+- [x] Preserve the reviewed Python training and blockchain utilities as source files; make their non-live status clear.
+- [x] Verify the dashboard chart, search, severity filter, incident details, CSV export, phone display, and regression tests.
+- [ ] Finish a full production migration and live model verification if a training dataset, model service, and deployment handoff become available.

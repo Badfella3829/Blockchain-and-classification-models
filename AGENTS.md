@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+The imported security dashboard lives in `src/components/threat-dashboard`, while the Python model and blockchain utilities stay in `source/model`; this keeps browser UI separate from unconnected model tooling.
