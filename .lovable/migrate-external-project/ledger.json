@@ -1,9 +1,0 @@
-{
-  "source": "github:Badfella3829/Blockchain-and-classification-models",
-  "capabilities": [
-    {"capability":"dashboard code","source":"src/components/threat-dashboard, routes, styles","outcome":"copied as-is","status":"verified","next_action":"none"},
-    {"capability":"python model and blockchain utilities","source":"source/model","outcome":"preserved as source files","status":"preserved","next_action":"none unless live scoring is needed"},
-    {"capability":"database schema and records","source":"empty drizzle schema; Cloud client unused by app code","outcome":"not needed; Cloud wiring not copied","status":"not_applicable","next_action":"none"},
-    {"capability":"auth, storage, endpoints, schedules, secrets","source":"none used","outcome":"none","status":"not_applicable","next_action":"none"}
-  ]
-}
