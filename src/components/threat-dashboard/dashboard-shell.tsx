@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIntegrityCheck, useSimulation, useThreatData } from "@/hooks/use-threat-data";
-import { fetchAllIncidents } from "@/lib/api";
+import { DEFAULT_FILTERS, fetchAllIncidents } from "@/lib/api";
 import type { LedgerBlock, Severity } from "@/lib/threat/types";
 import { IncidentTable } from "./incident-table";
 import { downloadIncidents, relativeTime, toIncidentRow } from "./incident-rows";
@@ -134,7 +134,7 @@ export function DashboardShell() {
     }
     setExporting(true);
     try {
-      const all = await fetchAllIncidents({ severity, search: safeSearch });
+      const all = await fetchAllIncidents({ ...DEFAULT_FILTERS, severity, search: safeSearch });
       if (all.length === 0) {
         toast.info("Nothing to export", { description: "No incidents match the current filters." });
         return;

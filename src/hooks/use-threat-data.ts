@@ -81,3 +81,28 @@ export function useIntegrity() {
   if (!value) throw new Error("useIntegrity must be used inside IntegrityProvider");
   return value;
 }
+
+// Hooks used by the current single-page dashboard (fixed 5 s refresh).
+import { blocksQuery, DEFAULT_FILTERS, incidentsQuery, type IncidentFilters } from "@/lib/api";
+
+export function useThreatData(filters: Pick<IncidentFilters, "severity" | "search" | "page" | "pageSize">) {
+  const metrics = useQuery(metricsQuery(5000));
+  const incidents = useQuery(incidentsQuery({ ...DEFAULT_FILTERS, ...filters }, 5000));
+  const blocks = useQuery({ ...blocksQuery(1, 4, 5000), select: (page) => page.items });
+  return { metrics, incidents, blocks, offline: metrics.isError && !metrics.data };
+}
+
+export function useIntegrityCheck() {
+  const verifyFn = useServerFn(api.verifyChain);
+  const [result, setResult] = useState<ChainVerification | null>(null);
+  const mutation = useMutation({
+    mutationFn: () => verifyFn(),
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.valid) toast.success("Ledger integrity verified", { description: `All ${data.length} blocks are intact.` });
+      else toast.error(`Tampering detected at block #${data.badIndex}`, { description: data.reason ?? undefined });
+    },
+    onError: (error) => toast.error("Verification failed", { description: errorText(error) }),
+  });
+  return { ...mutation, result };
+}
