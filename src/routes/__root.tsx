@@ -82,16 +82,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sentinel | Threat Intelligence Dashboard" },
-      { name: "description", content: "Review sample security detections, traffic signals, and audit activity in the Sentinel dashboard." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Sentinel | Threat Intelligence Dashboard" },
-      { property: "og:description", content: "Review sample security detections, traffic signals, and audit activity in the Sentinel dashboard." },
+      { title: "Overview · Sentinel Threat Intelligence" },
+      { name: "description", content: "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel." },
+      { property: "og:title", content: "Sentinel Threat Intelligence" },
+      { property: "og:description", content: "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -107,7 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" data-theme="dark">
       <head>
         <HeadContent />
       </head>

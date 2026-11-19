@@ -60,6 +60,11 @@ class SimulateRequest(BaseModel):
     count: int = Field(10, ge=1, le=MAX_SIMULATE)
 
 
+class StatusChangeRequest(BaseModel):
+    status: Literal["Open", "Contained"]
+    by: str = Field("Security team", min_length=1, max_length=40)
+
+
 def _env_path(name, default):
     value = os.environ.get(name)
     return Path(value) if value else default
@@ -170,13 +175,141 @@ class Service:
 
     # -- chain views -------------------------------------------------------
     def incidents(self):
+        latest_status = {}
+        for block in self.chain.chain:
+            event = block.get("event") if isinstance(block, dict) else None
+            if isinstance(event, dict) and event.get("type") == "status_change":
+                inc_id = event.get("incident_id")
+                if inc_id:
+                    latest_status[inc_id] = {
+                        "status": event.get("new_status", "Open"),
+                        "status_block_index": block["index"],
+                        "status_changed_at": block["timestamp"],
+                        "status_changed_by": event.get("by", "Security team"),
+                    }
         items = []
         for block in reversed(self.chain.chain):
             event = block.get("event") if isinstance(block, dict) else None
             if not isinstance(event, dict) or event.get("type") != "detection":
                 continue
-            items.append({**event, "block_index": block["index"], "detected_at": block["timestamp"], "hash": block["hash"]})
+            status_info = latest_status.get(event.get("event_id"), {})
+            items.append({
+                **event,
+                "status": status_info.get("status", event.get("status", "Open")),
+                "status_block_index": status_info.get("status_block_index"),
+                "status_changed_at": status_info.get("status_changed_at"),
+                "status_changed_by": status_info.get("status_changed_by"),
+                "block_index": block["index"],
+                "detected_at": block["timestamp"],
+                "hash": block["hash"],
+                "previous_hash": block["previous_hash"],
+            })
         return items
+
+    def change_incident_status(self, incident_id: str, new_status: str, by: str):
+        matches = [i for i in self.incidents() if i.get("event_id") == incident_id]
+        if not matches:
+            raise HTTPException(404, f"Incident {incident_id} was not found.")
+        if matches[0].get("status") == new_status:
+            raise HTTPException(409, f"Incident {incident_id} is already {new_status}.")
+        if len(self.chain.chain) >= MAX_BLOCKS:
+            raise HTTPException(429, f"The ledger is full ({MAX_BLOCKS} blocks).")
+        block = self.chain.add_block({
+            "type": "status_change",
+            "incident_id": incident_id,
+            "new_status": new_status,
+            "by": by,
+        })
+        return {"ok": True, "block_index": block["index"], "status": new_status}
+
+    def model_health(self):
+        metrics = self.metrics() or {}
+        predictions = self.predictions()
+        now = datetime.now(timezone.utc)
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        one_hour_ago = now - timedelta(hours=1)
+        twenty_five_hours_ago = now - timedelta(hours=25)
+        today_n = today_attacks = recent_n = recent_attacks = earlier_n = earlier_attacks = 0
+        attack_prob_sum = 0.0
+        for row in predictions:
+            try:
+                moment = datetime.fromisoformat(row["t"])
+            except (KeyError, ValueError):
+                continue
+            is_attack = bool(row.get("attack"))
+            if moment >= day_start:
+                today_n += 1
+                if is_attack:
+                    today_attacks += 1
+                    attack_prob_sum += float(row.get("p", 0.0))
+            if moment >= one_hour_ago:
+                recent_n += 1
+                if is_attack:
+                    recent_attacks += 1
+            elif moment >= twenty_five_hours_ago:
+                earlier_n += 1
+                if is_attack:
+                    earlier_attacks += 1
+
+        recent_rate = (recent_attacks * 100.0 / recent_n) if recent_n else None
+        baseline_rate = (earlier_attacks * 100.0 / earlier_n) if earlier_n else None
+        if recent_n < 20 or earlier_n < 20 or recent_rate is None or baseline_rate is None:
+            drift = {
+                "status": "insufficient",
+                "recentRate": recent_rate,
+                "baselineRate": baseline_rate,
+                "message": "Needs at least 20 predictions in the last hour and in the 24 hours before it.",
+            }
+        elif abs(recent_rate - baseline_rate) > 20:
+            direction = "rose" if recent_rate > baseline_rate else "fell"
+            drift = {
+                "status": "warning",
+                "recentRate": recent_rate,
+                "baselineRate": baseline_rate,
+                "message": f"Attack rate {direction} from {baseline_rate:.1f}% to {recent_rate:.1f}% in the last hour.",
+            }
+        else:
+            drift = {
+                "status": "ok",
+                "recentRate": recent_rate,
+                "baselineRate": baseline_rate,
+                "message": "Attack rate is in line with the earlier average.",
+            }
+
+        models = metrics.get("models", {})
+        selected = metrics.get("selected_model", "Random Forest")
+        artifact_bytes = metrics.get("artifact_bytes")
+        if artifact_bytes is None and self.model_path.is_file():
+            artifact_bytes = self.model_path.stat().st_size
+        return {
+            "info": {
+                "modelVersion": metrics.get("model_version", "unknown"),
+                "selectedModel": selected,
+                "evaluation": metrics.get("evaluation", "unknown"),
+                "trainedAt": metrics.get("trained_at", ""),
+                "features": metrics.get("features", []),
+                "scores": models.get(selected),
+            },
+            "datasetKind": metrics.get("dataset_kind", "synthetic" if "synthetic" in str(metrics.get("dataset", "")) else "real"),
+            "dataset": metrics.get("dataset", "unknown"),
+            "artifactBytes": artifact_bytes,
+            "webArtifactBytes": metrics.get("web_artifact_bytes"),
+            "trainRows": metrics.get("train_rows"),
+            "testRows": metrics.get("test_rows"),
+            "comparison": [
+                {"model": name, "accuracy": m["accuracy"], "precision": m["precision"], "recall": m["recall"], "f1": m["f1"]}
+                for name, m in models.items()
+            ],
+            "confusionMatrix": models.get(selected, {}).get("confusion_matrix"),
+            "featureImportances": metrics.get("feature_importances", [])[:10],
+            "live": {
+                "predictionsToday": today_n,
+                "attacksToday": today_attacks,
+                "attackRateToday": (today_attacks * 100.0 / today_n) if today_n else None,
+                "avgAttackConfidence": round((attack_prob_sum / today_attacks) * 100.0, 2) if today_attacks else None,
+                "drift": drift,
+            },
+        }
 
     def test_rows(self):
         if self._test_rows is None:
@@ -288,6 +421,14 @@ def create_app(model_path=None, metrics_path=None, chain_path=None, predictions_
             results.append(service.predict(features, source, category))
         attacks = sum(1 for r in results if r["is_attack"])
         return {"processed": len(results), "attacks": attacks, "normal": len(results) - attacks}
+
+    @app.post("/api/incidents/{incident_id}/status")
+    def update_incident_status(incident_id: str, body: StatusChangeRequest):
+        return service.change_incident_status(incident_id, body.status, body.by)
+
+    @app.get("/api/model/health")
+    def model_health():
+        return service.model_health()
 
     return app
 

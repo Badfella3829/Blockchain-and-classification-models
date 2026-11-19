@@ -78,7 +78,44 @@ export const alertsQuery = (since: string | null, interval: Interval) =>
   });
 
 export const modelHealthQuery = (interval: Interval) =>
-  queryOptions({ queryKey: ["threat", "model-health"], queryFn: () => getModelHealth(), refetchInterval: interval, retry: 1 });
+  queryOptions({
+    queryKey: ["threat", "model-health"],
+    queryFn: async () => {
+      if (typeof window !== "undefined") {
+        const response = await fetch("/api/model/health", { headers: { accept: "application/json" } });
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          throw new Error(text || `Model health request failed (${response.status}).`);
+        }
+        return (await response.json()) as Awaited<ReturnType<typeof getModelHealth>>;
+      }
+      return getModelHealth();
+    },
+    refetchInterval: interval,
+    retry: 1,
+  });
+
+export type StatusChangeResponse =
+  | { ok: true; blockIndex: number; status: IncidentStatus }
+  | { ok: false; message: string };
+
+/** Calls POST /api/incidents/{id}/status to append a status_change block on the ledger. */
+export async function postIncidentStatus(input: {
+  id: string;
+  status: IncidentStatus;
+  by: string;
+}): Promise<StatusChangeResponse> {
+  const response = await fetch(`/api/incidents/${encodeURIComponent(input.id)}/status`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ status: input.status, by: input.by }),
+  });
+  const payload = (await response.json().catch(() => null)) as StatusChangeResponse | null;
+  if (!payload) {
+    return { ok: false, message: `Status change failed (${response.status}).` };
+  }
+  return payload;
+}
 
 /** Every incident matching the current filters (for CSV export). */
 export async function fetchAllIncidents(filters: IncidentFilters) {
@@ -100,4 +137,4 @@ export function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export const api = { runSimulation, verifyChain, updateIncidentStatus, exportChain };
+export const api = { runSimulation, verifyChain, updateIncidentStatus, exportChain, postIncidentStatus };

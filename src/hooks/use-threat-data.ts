@@ -36,9 +36,8 @@ export function useSimulation() {
 
 export function useStatusChange() {
   const queryClient = useQueryClient();
-  const update = useServerFn(api.updateIncidentStatus);
   return useMutation({
-    mutationFn: (input: { id: string; status: IncidentStatus; by: string }) => update({ data: input }),
+    mutationFn: (input: { id: string; status: IncidentStatus; by: string }) => api.postIncidentStatus(input),
     onSuccess: (result, input) => {
       if (!result.ok) {
         toast.error("Status not changed", { description: result.message });
