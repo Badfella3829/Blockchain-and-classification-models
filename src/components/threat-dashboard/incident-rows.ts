@@ -89,7 +89,9 @@ export function downloadIncidents(rows: IncidentRow[], filename = "sentinel-inci
   ];
   const csv = [
     columns.join(","),
-    ...rows.map((row) => columns.map((column) => `"${String(row[column] ?? "").replace(/"/g, '""')}"`).join(",")),
+    ...rows.map((row) =>
+      columns.map((column) => `"${String(row[column] ?? "").replace(/"/g, '""')}"`).join(","),
+    ),
   ].join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const anchor = document.createElement("a");

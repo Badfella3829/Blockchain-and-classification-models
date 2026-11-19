@@ -8,7 +8,13 @@ export type WebModelBundle = {
   classes: number[];
   numeric: { columns: string[]; medians: number[]; means: number[]; scales: number[] };
   categorical: { columns: string[]; most_frequent: string[]; categories: string[][] };
-  trees: { left: number[]; right: number[]; feature: number[]; threshold: number[]; probability: number[] }[];
+  trees: {
+    left: number[];
+    right: number[];
+    feature: number[];
+    threshold: number[];
+    probability: number[];
+  }[];
   metrics?: Record<string, unknown>;
 };
 
@@ -30,7 +36,8 @@ export function vectorize(bundle: WebModelBundle, record: FeatureRecord): Float3
   categorical.columns.forEach((column, i) => {
     const raw = record[column];
     const value = isMissing(raw) ? categorical.most_frequent[i]! : String(raw);
-    for (const category of categorical.categories[i]!) vector[offset++] = value === category ? 1 : 0;
+    for (const category of categorical.categories[i]!)
+      vector[offset++] = value === category ? 1 : 0;
   });
   return vector;
 }
@@ -42,7 +49,8 @@ export function predictProbability(bundle: WebModelBundle, record: FeatureRecord
   for (const tree of bundle.trees) {
     let node = 0;
     while (tree.left[node] !== -1) {
-      node = x[tree.feature[node]!]! <= tree.threshold[node]! ? tree.left[node]! : tree.right[node]!;
+      node =
+        x[tree.feature[node]!]! <= tree.threshold[node]! ? tree.left[node]! : tree.right[node]!;
     }
     total += tree.probability[node]!;
   }

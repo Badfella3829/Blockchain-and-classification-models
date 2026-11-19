@@ -4,14 +4,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { useId } from "react";
 
 const chartConfig = {
@@ -31,7 +24,7 @@ export function TrafficChart({ data }: { data: TrafficPoint[] }) {
         accessibilityLayer
         data={data}
         key="sentinel-traffic-chart"
-        margin={{ top: 12, right: 8, left: -18, bottom: 0 }}
+        margin={{ top: 12, right: 8, left: 4, bottom: 0 }}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -54,7 +47,12 @@ export function TrafficChart({ data }: { data: TrafficPoint[] }) {
           tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           width={42}
         />
-        <YAxis yAxisId="threats" orientation="right" hide domain={[0, Math.ceil(maxThreats * 1.25)]} />
+        <YAxis
+          yAxisId="threats"
+          orientation="right"
+          hide
+          domain={[0, Math.ceil(maxThreats * 1.25)]}
+        />
         <ChartTooltip
           cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
           content={<ChartTooltipContent />}

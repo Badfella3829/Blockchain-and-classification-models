@@ -55,10 +55,7 @@ export function TopBarWidgets({ offline, onSelectIncident }: TopBarWidgetsProps)
   }, []);
 
   const searchQuery = useQuery({
-    ...incidentsQuery(
-      { ...DEFAULT_FILTERS, search: debouncedQuery, page: 1, pageSize: 6 },
-      false,
-    ),
+    ...incidentsQuery({ ...DEFAULT_FILTERS, search: debouncedQuery, page: 1, pageSize: 6 }, false),
     enabled: !offline && debouncedQuery.length > 0,
   });
 
@@ -76,7 +73,9 @@ export function TopBarWidgets({ offline, onSelectIncident }: TopBarWidgetsProps)
   const alertItems: IncidentRow[] = useMemo(() => {
     if (offline) {
       if (lastReadAlerts) return [];
-      return demoIncidents.filter((i) => i.severity === "Critical" || i.severity === "High").slice(0, 6);
+      return demoIncidents
+        .filter((i) => i.severity === "Critical" || i.severity === "High")
+        .slice(0, 6);
     }
     return (alerts.data?.items ?? []).map(toIncidentRow);
   }, [offline, alerts.data, lastReadAlerts]);

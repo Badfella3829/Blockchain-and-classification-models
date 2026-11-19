@@ -88,7 +88,10 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
           <AlertTriangle size={16} aria-hidden="true" />
           <p>
             <strong>Offline demo fallback.</strong>{" "}
-            <span>Showing bundled model evaluation metrics. Live ledger telemetry is unavailable offline.</span>
+            <span>
+              Showing bundled model evaluation metrics. Live ledger telemetry is unavailable
+              offline.
+            </span>
           </p>
         </div>
       ) : query.isError ? (
@@ -96,21 +99,32 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
           <AlertTriangle size={16} aria-hidden="true" />
           <p>
             <strong>Could not load model health.</strong>{" "}
-            <span>{query.error instanceof Error ? query.error.message : "GET /api/model/health failed."}</span>
+            <span>
+              {query.error instanceof Error ? query.error.message : "GET /api/model/health failed."}
+            </span>
           </p>
-          <Button variant="ghost" className="action-button" type="button" onClick={() => void query.refetch()}>
+          <Button
+            variant="ghost"
+            className="action-button"
+            type="button"
+            onClick={() => void query.refetch()}
+          >
             <RefreshCw size={14} aria-hidden="true" /> Retry
           </Button>
         </div>
       ) : null}
 
       {/* Model metadata cards */}
-      <section className="metrics-grid" aria-label="Deployed model metadata">
+      <section className="metrics-grid model-meta-grid" aria-label="Deployed model metadata">
         <MetricCard
           loading={loading}
           label="Model version"
           value={data?.info.modelVersion ?? "—"}
-          note={data ? `${data.info.selectedModel} · ${data.info.features.length} features` : "Deployed classifier"}
+          note={
+            data
+              ? `${data.info.selectedModel} · ${data.info.features.length} features`
+              : "Deployed classifier"
+          }
           icon={BrainCircuit}
           accent="cyan"
         />
@@ -156,10 +170,7 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
             <p>Measured directly from today&apos;s scored traffic and the audit ledger</p>
           </div>
           {drift ? (
-            <span
-              className={`drift-pill drift-${drift.status}`}
-              role="status"
-            >
+            <span className={`drift-pill drift-${drift.status}`} role="status">
               {drift.status === "warning" ? (
                 <AlertTriangle size={13} aria-hidden="true" />
               ) : drift.status === "ok" ? (
@@ -241,7 +252,9 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
               <h2>Model comparison (RF · LR · NB)</h2>
               <p>Accuracy, precision, recall, and F1 score (%) on the holdout test set</p>
             </div>
-            <span className="panel-icon"><Gauge size={16} aria-hidden="true" /></span>
+            <span className="panel-icon">
+              <Gauge size={16} aria-hidden="true" />
+            </span>
           </div>
 
           {loading ? (
@@ -251,7 +264,10 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
           ) : (
             <>
               <ChartContainer config={comparisonConfig} className="model-bar-chart">
-                <BarChart data={comparisonData} margin={{ top: 14, right: 12, left: -12, bottom: 4 }}>
+                <BarChart
+                  data={comparisonData}
+                  margin={{ top: 14, right: 12, left: -12, bottom: 4 }}
+                >
                   <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 5" />
                   <XAxis
                     dataKey="model"
@@ -267,10 +283,30 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
                     tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="accuracy" fill="var(--color-accuracy)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="precision" fill="var(--color-precision)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="recall" fill="var(--color-recall)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="f1" fill="var(--color-f1)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar
+                    dataKey="accuracy"
+                    fill="var(--color-accuracy)"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="precision"
+                    fill="var(--color-precision)"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="recall"
+                    fill="var(--color-recall)"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="f1"
+                    fill="var(--color-f1)"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
                 </BarChart>
               </ChartContainer>
               <div className="table-scroll mt-3">
@@ -278,10 +314,18 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
                   <thead>
                     <tr>
                       <th scope="col">Model</th>
-                      <th scope="col" className="text-right">Accuracy</th>
-                      <th scope="col" className="text-right">Precision</th>
-                      <th scope="col" className="text-right">Recall</th>
-                      <th scope="col" className="text-right">F1</th>
+                      <th scope="col" className="text-right">
+                        Accuracy
+                      </th>
+                      <th scope="col" className="text-right">
+                        Precision
+                      </th>
+                      <th scope="col" className="text-right">
+                        Recall
+                      </th>
+                      <th scope="col" className="text-right">
+                        F1
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -293,9 +337,15 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
                             <span className="deployed-note"> · Deployed</span>
                           ) : null}
                         </td>
-                        <td className="text-right font-mono tabular-nums">{row.accuracy.toFixed(2)}%</td>
-                        <td className="text-right font-mono tabular-nums">{row.precision.toFixed(2)}%</td>
-                        <td className="text-right font-mono tabular-nums">{row.recall.toFixed(2)}%</td>
+                        <td className="text-right font-mono tabular-nums">
+                          {row.accuracy.toFixed(2)}%
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {row.precision.toFixed(2)}%
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {row.recall.toFixed(2)}%
+                        </td>
                         <td className="text-right font-mono tabular-nums">{row.f1.toFixed(2)}%</td>
                       </tr>
                     ))}
@@ -325,10 +375,16 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
             <div className="cm-wrapper">
               <div className="cm-grid" role="table" aria-label="Confusion matrix">
                 <div className="cm-corner" role="columnheader" />
-                <div className="cm-col-head" role="columnheader">Predicted Normal</div>
-                <div className="cm-col-head" role="columnheader">Predicted Attack</div>
+                <div className="cm-col-head" role="columnheader">
+                  Predicted Normal
+                </div>
+                <div className="cm-col-head" role="columnheader">
+                  Predicted Attack
+                </div>
 
-                <div className="cm-row-head" role="rowheader">Actual Normal</div>
+                <div className="cm-row-head" role="rowheader">
+                  Actual Normal
+                </div>
                 <div className="cm-cell cm-cell-good" role="cell">
                   <span className="cm-tag">True Negative</span>
                   <strong className="tabular-nums">{tn.toLocaleString()}</strong>
@@ -344,7 +400,9 @@ export function ModelHealthView({ offline }: ModelHealthViewProps) {
                   </small>
                 </div>
 
-                <div className="cm-row-head" role="rowheader">Actual Attack</div>
+                <div className="cm-row-head" role="rowheader">
+                  Actual Attack
+                </div>
                 <div className="cm-cell cm-cell-bad" role="cell">
                   <span className="cm-tag">False Negative</span>
                   <strong className="tabular-nums">{fn.toLocaleString()}</strong>

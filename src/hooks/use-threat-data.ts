@@ -22,7 +22,9 @@ export function useSimulation() {
     mutationFn: (count: number) => simulate({ data: { count } }),
     onSuccess: (result) => {
       if (!result.ok) {
-        toast.error(result.status === 429 ? "Slow down" : "Simulation unavailable", { description: result.message });
+        toast.error(result.status === 429 ? "Slow down" : "Simulation unavailable", {
+          description: result.message,
+        });
         return;
       }
       toast.success(`Simulated ${result.processed} events`, {
@@ -37,13 +39,16 @@ export function useSimulation() {
 export function useStatusChange() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; status: IncidentStatus; by: string }) => api.postIncidentStatus(input),
+    mutationFn: (input: { id: string; status: IncidentStatus; by: string }) =>
+      api.postIncidentStatus(input),
     onSuccess: (result, input) => {
       if (!result.ok) {
         toast.error("Status not changed", { description: result.message });
         return;
       }
-      toast.success(`${input.id} marked ${result.status}`, { description: `Recorded in ledger block #${result.blockIndex}.` });
+      toast.success(`${input.id} marked ${result.status}`, {
+        description: `Recorded in ledger block #${result.blockIndex}.`,
+      });
       void queryClient.invalidateQueries({ queryKey: ["threat"] });
     },
     onError: (error) => toast.error("Status change failed", { description: errorText(error) }),
@@ -66,12 +71,22 @@ export function IntegrityProvider({ children }: { children: ReactNode }) {
     mutationFn: () => verifyFn(),
     onSuccess: (data) => {
       setResult(data);
-      if (data.valid) toast.success("Ledger integrity verified", { description: `All ${data.length} blocks are intact.` });
-      else toast.error(`Tampering detected at block #${data.badIndex}`, { description: data.reason ?? undefined });
+      if (data.valid)
+        toast.success("Ledger integrity verified", {
+          description: `All ${data.length} blocks are intact.`,
+        });
+      else
+        toast.error(`Tampering detected at block #${data.badIndex}`, {
+          description: data.reason ?? undefined,
+        });
     },
     onError: (error) => toast.error("Verification failed", { description: errorText(error) }),
   });
-  const value: IntegrityState = { result, isPending: mutation.isPending, verify: () => mutation.mutate() };
+  const value: IntegrityState = {
+    result,
+    isPending: mutation.isPending,
+    verify: () => mutation.mutate(),
+  };
   return createElement(IntegrityContext.Provider, { value }, children);
 }
 
@@ -84,7 +99,9 @@ export function useIntegrity() {
 // Hooks used by the current single-page dashboard (fixed 5 s refresh).
 import { blocksQuery, DEFAULT_FILTERS, incidentsQuery, type IncidentFilters } from "@/lib/api";
 
-export function useThreatData(filters: Pick<IncidentFilters, "severity" | "search" | "page" | "pageSize">) {
+export function useThreatData(
+  filters: Pick<IncidentFilters, "severity" | "search" | "page" | "pageSize">,
+) {
   const metrics = useQuery(metricsQuery(5000));
   const incidents = useQuery(incidentsQuery({ ...DEFAULT_FILTERS, ...filters }, 5000));
   const blocks = useQuery({ ...blocksQuery(1, 4, 5000), select: (page) => page.items });
@@ -98,8 +115,14 @@ export function useIntegrityCheck() {
     mutationFn: () => verifyFn(),
     onSuccess: (data) => {
       setResult(data);
-      if (data.valid) toast.success("Ledger integrity verified", { description: `All ${data.length} blocks are intact.` });
-      else toast.error(`Tampering detected at block #${data.badIndex}`, { description: data.reason ?? undefined });
+      if (data.valid)
+        toast.success("Ledger integrity verified", {
+          description: `All ${data.length} blocks are intact.`,
+        });
+      else
+        toast.error(`Tampering detected at block #${data.badIndex}`, {
+          description: data.reason ?? undefined,
+        });
     },
     onError: (error) => toast.error("Verification failed", { description: errorText(error) }),
   });

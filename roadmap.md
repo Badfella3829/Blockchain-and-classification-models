@@ -10,7 +10,7 @@
 - [ ] Brief 2 (stateless-safe): chain in DB with retry on conflict, canonical hash (sort_keys, compact separators), app role SELECT/INSERT only, genesis on first request
 - [ ] Brief 2 (abuse): simulate max 20/call, ~10 calls/min per visitor (DB counters), 5000 block cap, 429 messages
 - [ ] Brief 2 (model): RF <=50 trees, depth <=12, print size + fail >40 MB, parity test on 5 sample inputs
-- [x] Brief 2 (Vercel): user chose dashboard on Lovable + Python API also on Vercel
+- [x] Brief 2 (Deployment): web dashboard + Python API deployment architecture
 - [ ] Brief 3: Vercel Python API in api/index.py + api/_lib (DB via DATABASE_URL, file fallback in dev), requirements.txt deploy-only + requirements-train.txt, vercel.json, .vercelignore, bundle size report
 - [ ] Brief 3: model version label in dashboard; 429 message on rapid simulate; JS/Python same hash test
 - [ ] Brief 4: hash views (#overview/#detections/#audit/#model-health), active nav + aria-current, title per view, back/forward, collapsible mobile sidebar

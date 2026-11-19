@@ -8,11 +8,9 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { Toaster } from "@/components/ui/sonner";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -39,9 +37,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -83,9 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Overview · Sentinel Threat Intelligence" },
-      { name: "description", content: "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel." },
+      { name: "author", content: "Akansh Chahal" },
+      {
+        name: "description",
+        content:
+          "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel.",
+      },
       { property: "og:title", content: "Sentinel Threat Intelligence" },
-      { property: "og:description", content: "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel." },
+      {
+        property: "og:description",
+        content:
+          "Monitor live network threat detections, tamper-evident audit blocks, and model health in Sentinel.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -130,7 +134,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      <Toaster position="bottom-right" richColors closeButton />
     </QueryClientProvider>
   );
 }

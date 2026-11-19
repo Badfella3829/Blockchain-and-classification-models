@@ -1,9 +1,21 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type Theme = "dark" | "light";
 export type RefreshSetting = 5 | 15 | 30 | 0;
 
-const KEYS = { theme: "sentinel.theme", refresh: "sentinel.refresh", lastRead: "sentinel.alerts.lastRead" } as const;
+const KEYS = {
+  theme: "sentinel.theme",
+  refresh: "sentinel.refresh",
+  lastRead: "sentinel.alerts.lastRead",
+} as const;
 
 export function readStorage(key: string): string | null {
   try {
@@ -22,6 +34,7 @@ export function writeStorage(key: string, value: string) {
 }
 
 export function parseRefresh(value: string | null): RefreshSetting {
+  if (value === null || value.trim() === "") return 5;
   const n = Number(value);
   return n === 5 || n === 15 || n === 30 || n === 0 ? n : 5;
 }
@@ -90,7 +103,16 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       helpOpen,
       setHelpOpen,
     }),
-    [theme, setTheme, refreshSeconds, setRefreshSeconds, lastReadAlerts, markAlertsRead, settingsOpen, helpOpen],
+    [
+      theme,
+      setTheme,
+      refreshSeconds,
+      setRefreshSeconds,
+      lastReadAlerts,
+      markAlertsRead,
+      settingsOpen,
+      helpOpen,
+    ],
   );
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

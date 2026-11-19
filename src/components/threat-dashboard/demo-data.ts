@@ -1,5 +1,11 @@
 // Offline fallback only: shown with a "Demo data" badge when the live API cannot be reached.
-import type { IncidentSort, IncidentStatus, LedgerBlock, ModelHealth, Severity } from "@/lib/threat/types";
+import type {
+  IncidentSort,
+  IncidentStatus,
+  LedgerBlock,
+  ModelHealth,
+  Severity,
+} from "@/lib/threat/types";
 import type { IncidentRow } from "./incident-rows";
 
 type DemoIncident = {
@@ -138,14 +144,18 @@ export function filterIncidents(
     const matchesStatus = status === "All" || incident.status === status;
     const matchesSearch =
       !query ||
-      [incident.id, incident.title, incident.source, incident.category, incident.severity].some((value) =>
-        value.toLowerCase().includes(query),
+      [incident.id, incident.title, incident.source, incident.category, incident.severity].some(
+        (value) => value.toLowerCase().includes(query),
       );
     return matchesSeverity && matchesStatus && matchesSearch;
   });
 }
 
-export function sortIncidentRows(rows: IncidentRow[], sort: IncidentSort, order: "asc" | "desc"): IncidentRow[] {
+export function sortIncidentRows(
+  rows: IncidentRow[],
+  sort: IncidentSort,
+  order: "asc" | "desc",
+): IncidentRow[] {
   const dir = order === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
     let cmp = 0;
@@ -237,8 +247,28 @@ export const demoModelHealth: ModelHealth = {
     selectedModel: "Random Forest",
     evaluation: "offline fallback metrics",
     trainedAt: "2026-11-19T08:01:53.732501+00:00",
-    features: ["dur", "proto", "service", "state", "spkts", "dpkts", "sbytes", "dbytes", "rate", "sttl"],
-    scores: { accuracy: 0.962, precision: 0.9628, recall: 0.9681, f1: 0.9654, confusion_matrix: [[863, 41], [35, 1061]] },
+    features: [
+      "dur",
+      "proto",
+      "service",
+      "state",
+      "spkts",
+      "dpkts",
+      "sbytes",
+      "dbytes",
+      "rate",
+      "sttl",
+    ],
+    scores: {
+      accuracy: 0.962,
+      precision: 0.9628,
+      recall: 0.9681,
+      f1: 0.9654,
+      confusion_matrix: [
+        [863, 41],
+        [35, 1061],
+      ],
+    },
   },
   datasetKind: "synthetic",
   dataset: "synthetic_training-set.csv",
@@ -248,10 +278,19 @@ export const demoModelHealth: ModelHealth = {
   testRows: 2000,
   comparison: [
     { model: "Random Forest", accuracy: 0.962, precision: 0.9628, recall: 0.9681, f1: 0.9654 },
-    { model: "Logistic Regression", accuracy: 0.9545, precision: 0.9539, recall: 0.9635, f1: 0.9587 },
+    {
+      model: "Logistic Regression",
+      accuracy: 0.9545,
+      precision: 0.9539,
+      recall: 0.9635,
+      f1: 0.9587,
+    },
     { model: "Naive Bayes", accuracy: 0.939, precision: 0.9468, recall: 0.9416, f1: 0.9442 },
   ],
-  confusionMatrix: [[863, 41], [35, 1061]],
+  confusionMatrix: [
+    [863, 41],
+    [35, 1061],
+  ],
   featureImportances: [
     { feature: "dbytes", importance: 0.28007 },
     { feature: "sttl", importance: 0.18556 },

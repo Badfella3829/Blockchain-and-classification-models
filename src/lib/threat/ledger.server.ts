@@ -1,4 +1,4 @@
-// Server-only: ledger storage, scoring and simulation backed by Lovable Cloud.
+// Server-only: ledger storage, scoring and simulation backed by Supabase Postgres.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { GENESIS_EVENT, hashBlock, verifyBlocks } from "./canonical";
@@ -31,7 +31,11 @@ type Db = SupabaseClient<Database>;
 
 // Loaded once per worker, not per request.
 const MODEL = JSON.parse(modelText) as WebModelBundle;
-const SIMULATION_ROWS = JSON.parse(simulationRowsText) as { features: FeatureRecord; category: string; expected_probability: number }[];
+const SIMULATION_ROWS = JSON.parse(simulationRowsText) as {
+  features: FeatureRecord;
+  category: string;
+  expected_probability: number;
+}[];
 
 export const LIMITS = {
   maxEventsPerSimulation: 20,
@@ -61,7 +65,11 @@ export function scoreRecord(record: FeatureRecord) {
   const unknown = Object.keys(record).filter((key) => !MODEL.features.includes(key));
   if (unknown.length) throw new Error(`Unknown feature(s): ${unknown.join(", ")}`);
   const probability = predictProbability(MODEL, record);
-  return { probability, isAttack: probability >= ATTACK_THRESHOLD, severity: severityFor(probability) };
+  return {
+    probability,
+    isAttack: probability >= ATTACK_THRESHOLD,
+    severity: severityFor(probability),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +101,12 @@ const isConflict = (error: { code?: string } | null) => error?.code === "23505";
 /** Creates the genesis block when the ledger is empty (safe to call repeatedly). */
 export async function ensureGenesis(admin: Db) {
   if (await tip(admin)) return;
-  const block = { index: 1, timestamp: new Date().toISOString(), event: GENESIS_EVENT, previous_hash: "0" };
+  const block = {
+    index: 1,
+    timestamp: new Date().toISOString(),
+    event: GENESIS_EVENT,
+    previous_hash: "0",
+  };
   const hash = await hashBlock(block);
   const { error } = await admin.from("chain_blocks").insert({
     block_index: 1,
@@ -102,7 +115,8 @@ export async function ensureGenesis(admin: Db) {
     previous_hash: "0",
     hash,
   });
-  if (error && !isConflict(error)) throw new Error(`Could not create the genesis block: ${error.message}`);
+  if (error && !isConflict(error))
+    throw new Error(`Could not create the genesis block: ${error.message}`);
 }
 
 /**
@@ -110,7 +124,11 @@ export async function ensureGenesis(admin: Db) {
  * index / previous-hash constraints reject a writer racing for the same slot,
  * so on conflict we re-read the tip and rebuild the batch instead of forking.
  */
-export async function appendBlocks(admin: Db, events: (DetectionEvent | StatusChangeEvent)[], attempts = 8): Promise<LedgerBlock[]> {
+export async function appendBlocks(
+  admin: Db,
+  events: (DetectionEvent | StatusChangeEvent)[],
+  attempts = 8,
+): Promise<LedgerBlock[]> {
   if (events.length === 0) return [];
   await ensureGenesis(admin);
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -119,7 +137,12 @@ export async function appendBlocks(admin: Db, events: (DetectionEvent | StatusCh
     const built: LedgerBlock[] = [];
     let previous = last;
     for (const event of events) {
-      const block = { index: previous.index + 1, timestamp: new Date().toISOString(), event: event as JsonValue, previous_hash: previous.hash };
+      const block = {
+        index: previous.index + 1,
+        timestamp: new Date().toISOString(),
+        event: event as JsonValue,
+        previous_hash: previous.hash,
+      };
       previous = { ...block, hash: await hashBlock(block) };
       built.push(previous);
     }
@@ -139,7 +162,10 @@ export async function appendBlocks(admin: Db, events: (DetectionEvent | StatusCh
   throw new Error("The ledger is busy; please try again.");
 }
 
-export async function appendBlock(admin: Db, event: DetectionEvent | StatusChangeEvent): Promise<LedgerBlock> {
+export async function appendBlock(
+  admin: Db,
+  event: DetectionEvent | StatusChangeEvent,
+): Promise<LedgerBlock> {
   const [block] = await appendBlocks(admin, [event]);
   return block!;
 }
@@ -166,7 +192,11 @@ export async function verifyLedger(db: Db): Promise<ChainVerification> {
 }
 
 export async function recentBlocks(db: Db, limit: number): Promise<LedgerBlock[]> {
-  const { data, error } = await db.from("chain_blocks").select("*").order("block_index", { ascending: false }).limit(limit);
+  const { data, error } = await db
+    .from("chain_blocks")
+    .select("*")
+    .order("block_index", { ascending: false })
+    .limit(limit);
   if (error) throw new Error(`Could not read the ledger: ${error.message}`);
   return data.map(toBlock);
 }
@@ -218,23 +248,37 @@ export async function listIncidents(
   },
 ): Promise<IncidentPage> {
   const sortColumn = SORT_COLUMNS[options.sort ?? "block_index"];
-  let query = db.from("incident_view").select("*", { count: "exact" }).order(sortColumn, { ascending: options.order === "asc" });
+  let query = db
+    .from("incident_view")
+    .select("*", { count: "exact" })
+    .order(sortColumn, { ascending: options.order === "asc" });
   if (sortColumn !== "block_index") query = query.order("block_index", { ascending: false });
   if (options.severity) query = query.eq("severity", options.severity);
   if (options.status) query = query.eq("status", options.status);
   const search = options.search?.trim();
   if (search) {
     const term = `*${search}*`;
-    query = query.or(["event_id", "source", "category"].map((field) => `${field}.ilike.${term}`).join(","));
+    query = query.or(
+      ["event_id", "source", "category"].map((field) => `${field}.ilike.${term}`).join(","),
+    );
   }
   const from = (options.page - 1) * options.pageSize;
   const { data, error, count } = await query.range(from, from + options.pageSize - 1);
   if (error) throw new Error(`Could not read incidents: ${error.message}`);
-  return { items: data.map(toIncident), total: count ?? 0, page: options.page, pageSize: options.pageSize };
+  return {
+    items: data.map(toIncident),
+    total: count ?? 0,
+    page: options.page,
+    pageSize: options.pageSize,
+  };
 }
 
 export async function getIncident(db: Db, id: string): Promise<Incident | null> {
-  const { data, error } = await db.from("incident_view").select("*").eq("event_id", id).maybeSingle();
+  const { data, error } = await db
+    .from("incident_view")
+    .select("*")
+    .eq("event_id", id)
+    .maybeSingle();
   if (error) throw new Error(`Could not read the incident: ${error.message}`);
   return data ? toIncident(data) : null;
 }
@@ -263,19 +307,33 @@ export async function listBlocks(db: Db, page: number, pageSize: number): Promis
 }
 
 /** Appends a status_change block; the ledger is append-only, so rows are never updated. */
-export async function changeIncidentStatus(admin: Db, id: string, status: IncidentStatus, by: string) {
+export async function changeIncidentStatus(
+  admin: Db,
+  id: string,
+  status: IncidentStatus,
+  by: string,
+) {
   const incident = await getIncident(admin, id);
   if (!incident) return { ok: false as const, message: `Incident ${id} was not found.` };
-  if (incident.status === status) return { ok: false as const, message: `Incident ${id} is already ${status}.` };
+  if (incident.status === status)
+    return { ok: false as const, message: `Incident ${id} is already ${status}.` };
   if ((await countBlocks(admin)) >= LIMITS.maxBlocks) {
     return { ok: false as const, message: `The ledger is full (${LIMITS.maxBlocks} blocks).` };
   }
-  const block = await appendBlock(admin, { type: "status_change", incident_id: id, new_status: status, by });
+  const block = await appendBlock(admin, {
+    type: "status_change",
+    incident_id: id,
+    new_status: status,
+    by,
+  });
   return { ok: true as const, blockIndex: block.index, status };
 }
 
 export async function dashboardMetrics(db: Db): Promise<DashboardMetrics> {
-  const [summary, traffic] = await Promise.all([db.rpc("threat_summary"), db.rpc("traffic_series", { _hours: 24, _bucket_hours: 2 })]);
+  const [summary, traffic] = await Promise.all([
+    db.rpc("threat_summary"),
+    db.rpc("traffic_series", { _hours: 24, _bucket_hours: 2 }),
+  ]);
   if (summary.error) throw new Error(`Could not read metrics: ${summary.error.message}`);
   if (traffic.error) throw new Error(`Could not read traffic: ${traffic.error.message}`);
   const s = summary.data as {
@@ -316,7 +374,16 @@ type RawMetrics = {
   train_rows?: number;
   test_rows?: number;
   selected_model?: string;
-  models?: Record<string, { accuracy: number; precision: number; recall: number; f1: number; confusion_matrix: number[][] }>;
+  models?: Record<
+    string,
+    {
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1: number;
+      confusion_matrix: number[][];
+    }
+  >;
   feature_importances?: { feature: string; importance: number }[];
 };
 
@@ -337,21 +404,34 @@ export async function modelHealth(db: Db): Promise<ModelHealth> {
   const models = metrics.models ?? {};
   return {
     info,
-    datasetKind: metrics.dataset_kind ?? (metrics.dataset?.includes("synthetic") ? "synthetic" : "real"),
+    datasetKind:
+      metrics.dataset_kind ?? (metrics.dataset?.includes("synthetic") ? "synthetic" : "real"),
     dataset: metrics.dataset ?? "unknown",
     artifactBytes: metrics.artifact_bytes ?? null,
     webArtifactBytes: metrics.web_artifact_bytes ?? null,
     testRows: metrics.test_rows ?? null,
     trainRows: metrics.train_rows ?? null,
-    comparison: Object.entries(models).map(([model, m]) => ({ model, accuracy: m.accuracy, precision: m.precision, recall: m.recall, f1: m.f1 })),
+    comparison: Object.entries(models).map(([model, m]) => ({
+      model,
+      accuracy: m.accuracy,
+      precision: m.precision,
+      recall: m.recall,
+      f1: m.f1,
+    })),
     confusionMatrix: models[metrics.selected_model ?? "Random Forest"]?.confusion_matrix ?? null,
     featureImportances: (metrics.feature_importances ?? []).slice(0, 10),
     live: {
       predictionsToday: live.predictions_today,
       attacksToday: live.attacks_today,
-      attackRateToday: live.predictions_today ? (live.attacks_today * 100) / live.predictions_today : null,
-      avgAttackConfidence: live.avg_attack_confidence === null ? null : Number(live.avg_attack_confidence),
-      drift: detectDrift({ n: live.recent_count, attacks: live.recent_attacks }, { n: live.earlier_count, attacks: live.earlier_attacks }),
+      attackRateToday: live.predictions_today
+        ? (live.attacks_today * 100) / live.predictions_today
+        : null,
+      avgAttackConfidence:
+        live.avg_attack_confidence === null ? null : Number(live.avg_attack_confidence),
+      drift: detectDrift(
+        { n: live.recent_count, attacks: live.recent_attacks },
+        { n: live.earlier_count, attacks: live.earlier_attacks },
+      ),
     },
   };
 }
@@ -363,7 +443,11 @@ const randomId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpper
 const randomSource = () =>
   `10.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${1 + Math.floor(Math.random() * 254)}`;
 
-function detectionEvent(probability: number, severity: Severity, meta: { source?: string; category?: string }): DetectionEvent {
+function detectionEvent(
+  probability: number,
+  severity: Severity,
+  meta: { source?: string; category?: string },
+): DetectionEvent {
   return {
     type: "detection",
     event_id: `SIG-${randomId()}`,
@@ -385,9 +469,13 @@ export async function predictAndRecord(
   if (isAttack && (await countBlocks(admin)) >= LIMITS.maxBlocks) {
     throw new Error(`The ledger is full (${LIMITS.maxBlocks} blocks).`);
   }
-  const { error } = await admin.from("predictions").insert({ is_attack: isAttack, probability, severity });
+  const { error } = await admin
+    .from("predictions")
+    .insert({ is_attack: isAttack, probability, severity });
   if (error) throw new Error(`Could not save the prediction: ${error.message}`);
-  const block = isAttack ? await appendBlock(admin, detectionEvent(probability, severity, meta)) : null;
+  const block = isAttack
+    ? await appendBlock(admin, detectionEvent(probability, severity, meta))
+    : null;
   return {
     label: isAttack ? "Attack" : "Normal",
     probability: Math.round(probability * 10000) / 10000,
@@ -398,7 +486,9 @@ export async function predictAndRecord(
 }
 
 async function countBlocks(db: Db) {
-  const { count, error } = await db.from("chain_blocks").select("block_index", { count: "exact", head: true });
+  const { count, error } = await db
+    .from("chain_blocks")
+    .select("block_index", { count: "exact", head: true });
   if (error) throw new Error(`Could not count ledger blocks: ${error.message}`);
   return count ?? 0;
 }
@@ -406,7 +496,10 @@ async function countBlocks(db: Db) {
 /** Per-visitor limit kept in the database (workers keep no memory between requests). */
 async function checkRateLimit(admin: Db, clientKey: string): Promise<SimulationResult | null> {
   const windowStart = new Date(Date.now() - 60_000).toISOString();
-  await admin.from("simulation_requests").delete().lt("created_at", new Date(Date.now() - 3_600_000).toISOString());
+  await admin
+    .from("simulation_requests")
+    .delete()
+    .lt("created_at", new Date(Date.now() - 3_600_000).toISOString());
   const { data, error } = await admin
     .from("simulation_requests")
     .select("created_at")
@@ -429,13 +522,21 @@ async function checkRateLimit(admin: Db, clientKey: string): Promise<SimulationR
   return null;
 }
 
-export async function runSimulation(admin: Db, clientKey: string, count: number): Promise<SimulationResult> {
+export async function runSimulation(
+  admin: Db,
+  clientKey: string,
+  count: number,
+): Promise<SimulationResult> {
   const limited = await checkRateLimit(admin, clientKey);
   if (limited) return limited;
   await ensureGenesis(admin);
   const blocks = await countBlocks(admin);
   if (blocks >= LIMITS.maxBlocks) {
-    return { ok: false, status: 429, message: `The ledger is full (${LIMITS.maxBlocks} blocks). No more events can be recorded.` };
+    return {
+      ok: false,
+      status: 429,
+      message: `The ledger is full (${LIMITS.maxBlocks} blocks). No more events can be recorded.`,
+    };
   }
   const room = LIMITS.maxBlocks - blocks;
   const scored = [];
@@ -453,13 +554,22 @@ export async function runSimulation(admin: Db, clientKey: string, count: number)
     }
     scored.push({ ...score, category: row.category });
   }
-  const predictions = await admin
-    .from("predictions")
-    .insert(scored.map((s) => ({ is_attack: s.isAttack, probability: s.probability, severity: s.severity })));
-  if (predictions.error) throw new Error(`Could not save predictions: ${predictions.error.message}`);
+  const predictions = await admin.from("predictions").insert(
+    scored.map((s) => ({
+      is_attack: s.isAttack,
+      probability: s.probability,
+      severity: s.severity,
+    })),
+  );
+  if (predictions.error)
+    throw new Error(`Could not save predictions: ${predictions.error.message}`);
   await appendBlocks(
     admin,
-    scored.filter((s) => s.isAttack).map((s) => detectionEvent(s.probability, s.severity, { source: randomSource(), category: s.category })),
+    scored
+      .filter((s) => s.isAttack)
+      .map((s) =>
+        detectionEvent(s.probability, s.severity, { source: randomSource(), category: s.category }),
+      ),
   );
   return { ok: true, processed: scored.length, attacks, normal: scored.length - attacks, capped };
 }

@@ -82,7 +82,11 @@ async function loadFromDisk(): Promise<PersistedState | null> {
     const file = path.resolve(process.cwd(), ".data/sentinel-ledger.json");
     const raw = await fs.readFile(file, "utf8");
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
-    if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0 && Array.isArray(parsed.predictions)) {
+    if (
+      Array.isArray(parsed.blocks) &&
+      parsed.blocks.length > 0 &&
+      Array.isArray(parsed.predictions)
+    ) {
       return {
         blocks: parsed.blocks,
         predictions: parsed.predictions,
@@ -163,9 +167,18 @@ export async function createSeededLedgerState(nowMs = Date.now()): Promise<Persi
 
   // Record one realistic append-only status_change block on an older detection so the audit ledger showcases both event types.
   const olderDetection = blocks.find(
-    (b) => typeof b.event === "object" && b.event !== null && !Array.isArray(b.event) && b.event["type"] === "detection",
+    (b) =>
+      typeof b.event === "object" &&
+      b.event !== null &&
+      !Array.isArray(b.event) &&
+      b.event["type"] === "detection",
   );
-  if (olderDetection && typeof olderDetection.event === "object" && olderDetection.event !== null && !Array.isArray(olderDetection.event)) {
+  if (
+    olderDetection &&
+    typeof olderDetection.event === "object" &&
+    olderDetection.event !== null &&
+    !Array.isArray(olderDetection.event)
+  ) {
     const incidentId = String(olderDetection.event["event_id"]);
     const statusEvent: StatusChangeEvent = {
       type: "status_change",
@@ -222,15 +235,23 @@ export function localScoreRecord(record: FeatureRecord) {
   const unknown = Object.keys(record).filter((key) => !MODEL.features.includes(key));
   if (unknown.length) throw new Error(`Unknown feature(s): ${unknown.join(", ")}`);
   const probability = predictProbability(MODEL, record);
-  return { probability, isAttack: probability >= ATTACK_THRESHOLD, severity: severityFor(probability) };
+  return {
+    probability,
+    isAttack: probability >= ATTACK_THRESHOLD,
+    severity: severityFor(probability),
+  };
 }
 
 /** Pure derivation of incidents from an append-only block chain. */
 export function deriveIncidentsFromBlocks(blocks: LedgerBlock[]): Incident[] {
-  const latestStatus = new Map<string, { status: IncidentStatus; blockIndex: number; changedAt: string; by: string }>();
+  const latestStatus = new Map<
+    string,
+    { status: IncidentStatus; blockIndex: number; changedAt: string; by: string }
+  >();
 
   for (const block of blocks) {
-    if (typeof block.event !== "object" || block.event === null || Array.isArray(block.event)) continue;
+    if (typeof block.event !== "object" || block.event === null || Array.isArray(block.event))
+      continue;
     if (block.event["type"] === "status_change") {
       const incidentId = String(block.event["incident_id"] ?? "");
       const newStatus = block.event["new_status"] === "Contained" ? "Contained" : "Open";
@@ -249,17 +270,19 @@ export function deriveIncidentsFromBlocks(blocks: LedgerBlock[]): Incident[] {
 
   const incidents: Incident[] = [];
   for (const block of blocks) {
-    if (typeof block.event !== "object" || block.event === null || Array.isArray(block.event)) continue;
+    if (typeof block.event !== "object" || block.event === null || Array.isArray(block.event))
+      continue;
     if (block.event["type"] !== "detection") continue;
     const eventId = String(block.event["event_id"] ?? "");
     const statusUpdate = latestStatus.get(eventId);
-    const initialStatus: IncidentStatus = block.event["status"] === "Contained" ? "Contained" : "Open";
+    const initialStatus: IncidentStatus =
+      block.event["status"] === "Contained" ? "Contained" : "Open";
     incidents.push({
       type: "detection",
       event_id: eventId,
       source: String(block.event["source"] ?? "unknown"),
       category: String(block.event["category"] ?? "Unclassified"),
-      severity: (String(block.event["severity"] ?? "Low") as Severity),
+      severity: String(block.event["severity"] ?? "Low") as Severity,
       confidence: Number(block.event["confidence"] ?? 0),
       model_version: String(block.event["model_version"] ?? "unknown"),
       status: statusUpdate ? statusUpdate.status : initialStatus,
@@ -276,7 +299,11 @@ export function deriveIncidentsFromBlocks(blocks: LedgerBlock[]): Incident[] {
   return incidents;
 }
 
-export function sortIncidents(items: Incident[], sort: IncidentSort = "block_index", order: "asc" | "desc" = "desc"): Incident[] {
+export function sortIncidents(
+  items: Incident[],
+  sort: IncidentSort = "block_index",
+  order: "asc" | "desc" = "desc",
+): Incident[] {
   const dir = order === "asc" ? 1 : -1;
   return [...items].sort((a, b) => {
     let cmp = 0;
@@ -309,7 +336,12 @@ export function sortIncidents(items: Incident[], sort: IncidentSort = "block_ind
   });
 }
 
-function buildTrafficSeries(predictions: PredictionRecord[], nowMs = Date.now(), hours = 24, bucketHours = 2) {
+function buildTrafficSeries(
+  predictions: PredictionRecord[],
+  nowMs = Date.now(),
+  hours = 24,
+  bucketHours = 2,
+) {
   const now = new Date(nowMs);
   now.setUTCMinutes(0, 0, 0);
   const startMs = now.getTime() - hours * 3600_000;
@@ -336,7 +368,11 @@ const randomId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpper
 const randomSource = () =>
   `10.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${1 + Math.floor(Math.random() * 254)}`;
 
-function makeDetectionEvent(probability: number, severity: Severity, meta: { source?: string; category?: string }): DetectionEvent {
+function makeDetectionEvent(
+  probability: number,
+  severity: Severity,
+  meta: { source?: string; category?: string },
+): DetectionEvent {
   return {
     type: "detection",
     event_id: `SIG-${randomId()}`,
@@ -349,25 +385,35 @@ function makeDetectionEvent(probability: number, severity: Severity, meta: { sou
   };
 }
 
-async function appendLocalBlocks(state: PersistedState, events: (DetectionEvent | StatusChangeEvent)[]): Promise<LedgerBlock[]> {
+async function appendLocalBlocks(
+  state: PersistedState,
+  events: (DetectionEvent | StatusChangeEvent)[],
+): Promise<LedgerBlock[]> {
   if (events.length === 0) return [];
-  let previous = state.blocks[state.blocks.length - 1];
+  let previous: LedgerBlock | undefined = state.blocks[state.blocks.length - 1];
   if (!previous) {
-    const genesisBase = { index: 1, timestamp: new Date().toISOString(), event: GENESIS_EVENT as JsonValue, previous_hash: "0" };
+    const genesisBase = {
+      index: 1,
+      timestamp: new Date().toISOString(),
+      event: GENESIS_EVENT as JsonValue,
+      previous_hash: "0",
+    };
     previous = { ...genesisBase, hash: await hashBlock(genesisBase) };
     state.blocks.push(previous);
   }
   const built: LedgerBlock[] = [];
   for (const event of events) {
+    const prevBlock: LedgerBlock = previous;
     const base = {
-      index: previous.index + 1,
+      index: prevBlock.index + 1,
       timestamp: new Date().toISOString(),
       event: event as JsonValue,
-      previous_hash: previous.hash,
+      previous_hash: prevBlock.hash,
     };
-    previous = { ...base, hash: await hashBlock(base) };
-    state.blocks.push(previous);
-    built.push(previous);
+    const nextBlock: LedgerBlock = { ...base, hash: await hashBlock(base) };
+    previous = nextBlock;
+    state.blocks.push(nextBlock);
+    built.push(nextBlock);
   }
   await saveToDisk(state);
   return built;
@@ -450,7 +496,11 @@ export async function localAlertsSince(since: string | null): Promise<AlertFeed>
   const sinceMs = since ? new Date(since).getTime() : null;
   const matching = deriveIncidentsFromBlocks(state.blocks)
     .filter((item) => item.severity === "Critical" || item.severity === "High")
-    .filter((item) => (sinceMs === null || Number.isNaN(sinceMs) ? true : new Date(item.detectedAt).getTime() > sinceMs))
+    .filter((item) =>
+      sinceMs === null || Number.isNaN(sinceMs)
+        ? true
+        : new Date(item.detectedAt).getTime() > sinceMs,
+    )
     .sort((a, b) => b.blockIndex - a.blockIndex);
   return { unread: matching.length, items: matching.slice(0, 8) };
 }
@@ -487,9 +537,13 @@ export async function localChangeIncidentStatus(id: string, status: IncidentStat
   const state = await getState();
   const incident = deriveIncidentsFromBlocks(state.blocks).find((item) => item.event_id === id);
   if (!incident) return { ok: false as const, message: `Incident ${id} was not found.` };
-  if (incident.status === status) return { ok: false as const, message: `Incident ${id} is already ${status}.` };
+  if (incident.status === status)
+    return { ok: false as const, message: `Incident ${id} is already ${status}.` };
   if (state.blocks.length >= LOCAL_LIMITS.maxBlocks) {
-    return { ok: false as const, message: `The ledger is full (${LOCAL_LIMITS.maxBlocks} blocks).` };
+    return {
+      ok: false as const,
+      message: `The ledger is full (${LOCAL_LIMITS.maxBlocks} blocks).`,
+    };
   }
   const [block] = await appendLocalBlocks(state, [
     { type: "status_change", incident_id: id, new_status: status, by },
@@ -505,7 +559,16 @@ type RawMetrics = {
   train_rows?: number;
   test_rows?: number;
   selected_model?: string;
-  models?: Record<string, { accuracy: number; precision: number; recall: number; f1: number; confusion_matrix: number[][] }>;
+  models?: Record<
+    string,
+    {
+      accuracy: number;
+      precision: number;
+      recall: number;
+      f1: number;
+      confusion_matrix: number[][];
+    }
+  >;
   feature_importances?: { feature: string; importance: number }[];
 };
 
@@ -550,7 +613,8 @@ export async function localModelHealth(): Promise<ModelHealth> {
   const models = metrics.models ?? {};
   return {
     info,
-    datasetKind: metrics.dataset_kind ?? (metrics.dataset?.includes("synthetic") ? "synthetic" : "real"),
+    datasetKind:
+      metrics.dataset_kind ?? (metrics.dataset?.includes("synthetic") ? "synthetic" : "real"),
     dataset: metrics.dataset ?? "unknown",
     artifactBytes: metrics.artifact_bytes ?? null,
     webArtifactBytes: metrics.web_artifact_bytes ?? null,
@@ -569,7 +633,9 @@ export async function localModelHealth(): Promise<ModelHealth> {
       predictionsToday,
       attacksToday,
       attackRateToday: predictionsToday ? (attacksToday * 100) / predictionsToday : null,
-      avgAttackConfidence: attacksToday ? Math.round(((attackProbSum / attacksToday) * 100) * 100) / 100 : null,
+      avgAttackConfidence: attacksToday
+        ? Math.round((attackProbSum / attacksToday) * 100 * 100) / 100
+        : null,
       drift: detectDrift(
         { n: recentCount, attacks: recentAttacks },
         { n: earlierCount, attacks: earlierAttacks },
@@ -578,7 +644,10 @@ export async function localModelHealth(): Promise<ModelHealth> {
   };
 }
 
-export async function localRunSimulation(clientKey: string, count: number): Promise<SimulationResult> {
+export async function localRunSimulation(
+  clientKey: string,
+  count: number,
+): Promise<SimulationResult> {
   const state = await getState();
   const now = Date.now();
   const windowStart = now - 60_000;
@@ -604,7 +673,8 @@ export async function localRunSimulation(clientKey: string, count: number): Prom
   }
 
   const room = LOCAL_LIMITS.maxBlocks - state.blocks.length;
-  const scored: { probability: number; isAttack: boolean; severity: Severity; category: string }[] = [];
+  const scored: { probability: number; isAttack: boolean; severity: Severity; category: string }[] =
+    [];
   let attacks = 0;
   let capped = false;
 
@@ -635,7 +705,12 @@ export async function localRunSimulation(clientKey: string, count: number): Prom
     state,
     scored
       .filter((s) => s.isAttack)
-      .map((s) => makeDetectionEvent(s.probability, s.severity, { source: randomSource(), category: s.category })),
+      .map((s) =>
+        makeDetectionEvent(s.probability, s.severity, {
+          source: randomSource(),
+          category: s.category,
+        }),
+      ),
   );
   if (attacks === 0) await saveToDisk(state);
 
@@ -659,7 +734,9 @@ export async function localPredictAndRecord(
   });
   let blockIndex: number | null = null;
   if (isAttack) {
-    const [block] = await appendLocalBlocks(state, [makeDetectionEvent(probability, severity, meta)]);
+    const [block] = await appendLocalBlocks(state, [
+      makeDetectionEvent(probability, severity, meta),
+    ]);
     blockIndex = block?.index ?? null;
   } else {
     await saveToDisk(state);
@@ -670,5 +747,92 @@ export async function localPredictAndRecord(
     severity,
     recorded: isAttack,
     blockIndex,
+  };
+}
+
+export type FlowSignal = {
+  feature: string;
+  value: number;
+  zScore: number;
+};
+
+export type AnalyzeFlowResult = {
+  ok: true;
+  label: "Attack" | "Normal";
+  probability: number;
+  confidence: number;
+  severity: Severity;
+  modelVersion: string;
+  recorded: boolean;
+  eventId: string | null;
+  blockIndex: number | null;
+  blockHash: string | null;
+  signals: FlowSignal[];
+};
+
+export async function localAnalyzeFlow(input: {
+  features: FeatureRecord;
+  source?: string | undefined;
+  category?: string | undefined;
+  recordToLedger?: boolean | undefined;
+}): Promise<AnalyzeFlowResult> {
+  const { probability, isAttack, severity } = localScoreRecord(input.features);
+
+  const signals: FlowSignal[] = MODEL.numeric.columns
+    .map((column, idx) => {
+      const raw = input.features[column];
+      const numericVal =
+        raw === null || raw === undefined ? MODEL.numeric.medians[idx]! : Number(raw);
+      const mean = MODEL.numeric.means[idx] ?? 0;
+      const scale = MODEL.numeric.scales[idx] || 1;
+      const z = (numericVal - mean) / scale;
+      return {
+        feature: column,
+        value: Math.round(numericVal * 1000) / 1000,
+        zScore: Math.round(z * 100) / 100,
+      };
+    })
+    .sort((a, b) => Math.abs(b.zScore) - Math.abs(a.zScore))
+    .slice(0, 5);
+
+  let recorded = false;
+  let eventId: string | null = null;
+  let blockIndex: number | null = null;
+  let blockHash: string | null = null;
+
+  if (input.recordToLedger && isAttack) {
+    const state = await getState();
+    if (state.blocks.length >= LOCAL_LIMITS.maxBlocks) {
+      throw new Error(`The ledger is full (${LOCAL_LIMITS.maxBlocks} blocks).`);
+    }
+    state.predictions.push({
+      createdAt: new Date().toISOString(),
+      isAttack,
+      probability,
+      severity,
+    });
+    const event = makeDetectionEvent(probability, severity, {
+      source: input.source?.trim() || "10.28.99.14",
+      category: input.category?.trim() || "Custom Flow",
+    });
+    const [block] = await appendLocalBlocks(state, [event]);
+    recorded = true;
+    eventId = event.event_id;
+    blockIndex = block?.index ?? null;
+    blockHash = block?.hash ?? null;
+  }
+
+  return {
+    ok: true,
+    label: isAttack ? "Attack" : "Normal",
+    probability: Math.round(probability * 10000) / 10000,
+    confidence: Math.round(probability * 1000) / 10,
+    severity,
+    modelVersion: MODEL.model_version,
+    recorded,
+    eventId,
+    blockIndex,
+    blockHash,
+    signals,
   };
 }

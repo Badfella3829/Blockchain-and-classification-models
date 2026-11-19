@@ -103,11 +103,15 @@ export function HelpDialog({ offline, onNavigate }: HelpDialogProps) {
 
   return (
     <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-      <DialogContent className="sentinel-dialog sm:max-w-xl" aria-label="Sentinel help and guided tour">
+      <DialogContent
+        className="sentinel-dialog sm:max-w-xl"
+        aria-label="Sentinel help and guided tour"
+      >
         <DialogHeader>
           <DialogTitle>Guided tour &amp; workspace help</DialogTitle>
           <DialogDescription>
-            Walk through the four core security workflows, keyboard shortcuts, and project documentation.
+            Walk through the four core security workflows, keyboard shortcuts, and project
+            documentation.
           </DialogDescription>
         </DialogHeader>
 
@@ -184,26 +188,33 @@ export function HelpDialog({ offline, onNavigate }: HelpDialogProps) {
           <ul className="shortcut-list">
             <li>
               <span>Focus global incident search</span>
-              <span><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>K</kbd></span>
+              <span>
+                <kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>K</kbd>
+              </span>
+            </li>
+            <li>
+              <span>Jump to Overview / Detections / Audit / Model health</span>
+              <span>
+                <kbd>1</kbd> – <kbd>4</kbd>
+              </span>
+            </li>
+            <li>
+              <span>Open this guided help dialog</span>
+              <span>
+                <kbd>?</kbd>
+              </span>
             </li>
             <li>
               <span>Close active drawer, menu, or dialog</span>
-              <span><kbd>Esc</kbd></span>
-            </li>
-            <li>
-              <span>Navigate views via browser history</span>
-              <span><kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd></span>
+              <span>
+                <kbd>Esc</kbd>
+              </span>
             </li>
           </ul>
         </div>
 
         <div className="help-dialog-actions">
-          <a
-            href="/api/readme"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="readme-link"
-          >
+          <a href="/api/readme" target="_blank" rel="noopener noreferrer" className="readme-link">
             <BookOpen size={14} aria-hidden="true" />
             <span>Read project README</span>
             <ExternalLink size={12} aria-hidden="true" />
@@ -242,9 +253,7 @@ export function SettingsDialog({ offline, modelVersion }: SettingsDialogProps) {
       <DialogContent className="sentinel-dialog sm:max-w-md" aria-label="Workspace settings">
         <DialogHeader>
           <DialogTitle>Workspace settings</DialogTitle>
-          <DialogDescription>
-            Preferences are saved locally in your browser.
-          </DialogDescription>
+          <DialogDescription>Preferences are saved locally in your browser.</DialogDescription>
         </DialogHeader>
 
         <div className="settings-section">
@@ -318,12 +327,10 @@ export function WorkspaceFooter({ offline, modelVersion }: WorkspaceMenuProps) {
     <div className="sidebar-footer">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="workspace-menu-trigger"
-            aria-label="Open workspace menu"
-          >
-            <span className="avatar-mark" aria-hidden="true">S</span>
+          <button type="button" className="workspace-menu-trigger" aria-label="Open workspace menu">
+            <span className="avatar-mark" aria-hidden="true">
+              S
+            </span>
             <span className="account-copy">
               <strong>Security team</strong>
               <small>{offline ? "Offline demo" : "Live workspace"}</small>
@@ -351,7 +358,11 @@ export function WorkspaceFooter({ offline, modelVersion }: WorkspaceMenuProps) {
               setTheme(theme === "dark" ? "light" : "dark");
             }}
           >
-            {theme === "dark" ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />}
+            {theme === "dark" ? (
+              <Sun size={14} aria-hidden="true" />
+            ) : (
+              <Moon size={14} aria-hidden="true" />
+            )}
             <span>Switch to {theme === "dark" ? "light" : "dark"} theme</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>

@@ -6,7 +6,11 @@ import type { Database } from "@/integrations/supabase/types";
 import { INCIDENT_SORTS, SEVERITIES } from "./types";
 
 function hasSupabaseConfig(): boolean {
-  return Boolean(process.env["SUPABASE_URL"] && process.env["SUPABASE_PUBLISHABLE_KEY"]);
+  return Boolean(
+    process.env["SUPABASE_URL"] &&
+    process.env["SUPABASE_PUBLISHABLE_KEY"] &&
+    process.env["SUPABASE_SERVICE_ROLE_KEY"],
+  );
 }
 
 // Public, read-only client (publishable key + read-only policies). Created per request.
@@ -19,7 +23,8 @@ function publicClient() {
     global: {
       fetch: (input, init) => {
         const headers = new Headers(init?.headers);
-        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) headers.delete("Authorization");
+        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`)
+          headers.delete("Authorization");
         headers.set("apikey", key);
         return fetch(input, { ...init, headers });
       },
@@ -57,7 +62,7 @@ const incidentQuery = z.object({
   search: z
     .string()
     .max(60)
-    .regex(/^[\w .:\-]*$/, "Search may only use letters, numbers, spaces, dots, colons and dashes.")
+    .regex(/^[\w .:-]*$/, "Search may only use letters, numbers, spaces, dots, colons and dashes.")
     .optional(),
   sort: z.enum(INCIDENT_SORTS).optional(),
   order: z.enum(["asc", "desc"]).optional(),
@@ -86,7 +91,9 @@ export const getIncidents = createServerFn({ method: "GET" })
   });
 
 export const getIncidentDetail = createServerFn({ method: "GET" })
-  .inputValidator((input: { id: string }) => z.object({ id: z.string().regex(/^SIG-[A-Z0-9]{4,16}$/) }).parse(input))
+  .inputValidator((input: { id: string }) =>
+    z.object({ id: z.string().regex(/^SIG-[A-Z0-9]{4,16}$/) }).parse(input),
+  )
   .handler(async ({ data }) => {
     if (!hasSupabaseConfig()) {
       const { localGetIncident } = await localLedger();
@@ -97,7 +104,9 @@ export const getIncidentDetail = createServerFn({ method: "GET" })
   });
 
 export const getAlerts = createServerFn({ method: "GET" })
-  .inputValidator((input: { since: string | null }) => z.object({ since: z.string().datetime().nullable() }).parse(input))
+  .inputValidator((input: { since: string | null }) =>
+    z.object({ since: z.string().datetime().nullable() }).parse(input),
+  )
   .handler(async ({ data }) => {
     if (!hasSupabaseConfig()) {
       const { localAlertsSince } = await localLedger();
@@ -109,7 +118,12 @@ export const getAlerts = createServerFn({ method: "GET" })
 
 export const getBlocks = createServerFn({ method: "GET" })
   .inputValidator((input: { page?: number; pageSize?: number }) =>
-    z.object({ page: z.number().int().min(1).max(10_000).default(1), pageSize: z.number().int().min(1).max(100).default(15) }).parse(input),
+    z
+      .object({
+        page: z.number().int().min(1).max(10_000).default(1),
+        pageSize: z.number().int().min(1).max(100).default(15),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     if (!hasSupabaseConfig()) {
@@ -158,7 +172,9 @@ export const updateIncidentStatus = createServerFn({ method: "POST" })
   });
 
 export const getRecentBlocks = createServerFn({ method: "GET" })
-  .inputValidator((input: { limit?: number }) => z.object({ limit: z.number().int().min(1).max(50).default(6) }).parse(input))
+  .inputValidator((input: { limit?: number }) =>
+    z.object({ limit: z.number().int().min(1).max(50).default(6) }).parse(input),
+  )
   .handler(async ({ data }) => {
     if (!hasSupabaseConfig()) {
       const { localRecentBlocks } = await localLedger();
@@ -178,17 +194,23 @@ export const verifyChain = createServerFn({ method: "GET" }).handler(async () =>
 });
 
 function clientKeySource() {
-  const forwarded = getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0];
+  const forwarded =
+    getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0];
   return (forwarded ?? "unknown").trim();
 }
 
 async function hashedClientKey() {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`sentinel:${clientKeySource()}`));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`sentinel:${clientKeySource()}`),
+  );
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export const runSimulation = createServerFn({ method: "POST" })
-  .inputValidator((input: { count?: number }) => z.object({ count: z.number().int().min(1).max(20).default(10) }).parse(input))
+  .inputValidator((input: { count?: number }) =>
+    z.object({ count: z.number().int().min(1).max(20).default(10) }).parse(input),
+  )
   .handler(async ({ data }) => {
     if (!hasSupabaseConfig()) {
       const { localRunSimulation } = await localLedger();
@@ -201,14 +223,24 @@ export const runSimulation = createServerFn({ method: "POST" })
 const featureValue = z.union([z.number().finite(), z.string().max(64), z.null()]);
 
 export const predictRecord = createServerFn({ method: "POST" })
-  .inputValidator((input: { features: Record<string, number | string | null>; source?: string; category?: string }) =>
-    z
-      .object({
-        features: z.record(featureValue).refine((f) => Object.keys(f).length > 0 && Object.keys(f).length <= 60, "Provide 1-60 features."),
-        source: z.string().max(64).optional(),
-        category: z.string().max(64).optional(),
-      })
-      .parse(input),
+  .inputValidator(
+    (input: {
+      features: Record<string, number | string | null>;
+      source?: string;
+      category?: string;
+    }) =>
+      z
+        .object({
+          features: z
+            .record(featureValue)
+            .refine(
+              (f) => Object.keys(f).length > 0 && Object.keys(f).length <= 60,
+              "Provide 1-60 features.",
+            ),
+          source: z.string().max(64).optional(),
+          category: z.string().max(64).optional(),
+        })
+        .parse(input),
   )
   .handler(async ({ data }) => {
     const meta = {

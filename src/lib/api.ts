@@ -49,7 +49,12 @@ export const toIncidentQuery = (filters: IncidentFilters) => ({
 export const cleanSearch = (value: string) => value.replace(/[^\w .:-]/g, "").slice(0, 60);
 
 export const metricsQuery = (interval: Interval) =>
-  queryOptions({ queryKey: ["threat", "metrics"], queryFn: () => getDashboardMetrics(), refetchInterval: interval, retry: 1 });
+  queryOptions({
+    queryKey: ["threat", "metrics"],
+    queryFn: () => getDashboardMetrics(),
+    refetchInterval: interval,
+    retry: 1,
+  });
 
 export const incidentsQuery = (filters: IncidentFilters, interval: Interval) =>
   queryOptions({
@@ -82,7 +87,9 @@ export const modelHealthQuery = (interval: Interval) =>
     queryKey: ["threat", "model-health"],
     queryFn: async () => {
       if (typeof window !== "undefined") {
-        const response = await fetch("/api/model/health", { headers: { accept: "application/json" } });
+        const response = await fetch("/api/model/health", {
+          headers: { accept: "application/json" },
+        });
         if (!response.ok) {
           const text = await response.text().catch(() => "");
           throw new Error(text || `Model health request failed (${response.status}).`);
@@ -96,8 +103,7 @@ export const modelHealthQuery = (interval: Interval) =>
   });
 
 export type StatusChangeResponse =
-  | { ok: true; blockIndex: number; status: IncidentStatus }
-  | { ok: false; message: string };
+  { ok: true; blockIndex: number; status: IncidentStatus } | { ok: false; message: string };
 
 /** Calls POST /api/incidents/{id}/status to append a status_change block on the ledger. */
 export async function postIncidentStatus(input: {
@@ -121,7 +127,9 @@ export async function postIncidentStatus(input: {
 export async function fetchAllIncidents(filters: IncidentFilters) {
   const items = [];
   for (let page = 1; page <= 10; page += 1) {
-    const result = await getIncidents({ data: toIncidentQuery({ ...filters, page, pageSize: 1000 }) });
+    const result = await getIncidents({
+      data: toIncidentQuery({ ...filters, page, pageSize: 1000 }),
+    });
     items.push(...result.items);
     if (items.length >= result.total || result.items.length === 0) break;
   }
@@ -129,7 +137,9 @@ export async function fetchAllIncidents(filters: IncidentFilters) {
 }
 
 export function downloadJson(data: unknown, filename: string) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+  );
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
@@ -137,4 +147,46 @@ export function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export const api = { runSimulation, verifyChain, updateIncidentStatus, exportChain, postIncidentStatus };
+export type FlowAnalysisResponse =
+  | {
+      ok: true;
+      label: "Attack" | "Normal";
+      probability: number;
+      confidence: number;
+      severity: Severity;
+      modelVersion: string;
+      recorded: boolean;
+      eventId: string | null;
+      blockIndex: number | null;
+      blockHash: string | null;
+      signals: { feature: string; value: number; zScore: number }[];
+    }
+  | { ok: false; message: string };
+
+/** Calls POST /api/predict to score a network flow against the deployed Random Forest. */
+export async function analyzeFlow(input: {
+  features: Record<string, number | string | null>;
+  source?: string;
+  category?: string;
+  recordToLedger?: boolean;
+}): Promise<FlowAnalysisResponse> {
+  const response = await fetch("/api/predict", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = (await response.json().catch(() => null)) as FlowAnalysisResponse | null;
+  if (!payload) {
+    return { ok: false, message: `Flow analysis failed (${response.status}).` };
+  }
+  return payload;
+}
+
+export const api = {
+  runSimulation,
+  verifyChain,
+  updateIncidentStatus,
+  exportChain,
+  postIncidentStatus,
+  analyzeFlow,
+};

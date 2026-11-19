@@ -5,7 +5,11 @@ import type { Database } from "@/integrations/supabase/types";
 import readmeText from "../../../README.md?raw";
 
 function hasSupabaseConfig(): boolean {
-  return Boolean(process.env["SUPABASE_URL"] && process.env["SUPABASE_PUBLISHABLE_KEY"]);
+  return Boolean(
+    process.env["SUPABASE_URL"] &&
+    process.env["SUPABASE_PUBLISHABLE_KEY"] &&
+    process.env["SUPABASE_SERVICE_ROLE_KEY"],
+  );
 }
 
 function publicClient() {
@@ -16,7 +20,8 @@ function publicClient() {
     global: {
       fetch: (input, init) => {
         const headers = new Headers(init?.headers);
-        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) headers.delete("Authorization");
+        if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`)
+          headers.delete("Authorization");
         headers.set("apikey", key);
         return fetch(input, { ...init, headers });
       },
@@ -44,6 +49,13 @@ const statusPayloadSchema = z.object({
 
 const incidentIdSchema = z.string().regex(/^SIG-[A-Z0-9]{4,16}$/, "Invalid incident ID.");
 
+const predictPayloadSchema = z.object({
+  features: z.record(z.union([z.number(), z.string(), z.null()])),
+  source: z.string().trim().max(48).optional(),
+  category: z.string().trim().max(48).optional(),
+  recordToLedger: z.boolean().default(false),
+});
+
 export async function handleThreatApiRequest(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
   const pathname = url.pathname;
@@ -58,7 +70,10 @@ export async function handleThreatApiRequest(request: Request): Promise<Response
       const { localModelHealth } = await import("./local-ledger.server");
       return jsonResponse(await localModelHealth());
     } catch (error) {
-      return jsonResponse({ error: error instanceof Error ? error.message : "Could not read model health." }, 500);
+      return jsonResponse(
+        { error: error instanceof Error ? error.message : "Could not read model health." },
+        500,
+      );
     }
   }
 
@@ -86,26 +101,52 @@ export async function handleThreatApiRequest(request: Request): Promise<Response
 
     try {
       const result = hasSupabaseConfig()
-        ? await (await import("./ledger.server")).changeIncidentStatus(
-            await adminClient(),
-            idCheck.data,
-            nextStatus,
-            parsed.data.by,
-          )
-        : await (await import("./local-ledger.server")).localChangeIncidentStatus(
-            idCheck.data,
-            nextStatus,
-            parsed.data.by,
-          );
+        ? await (
+            await import("./ledger.server")
+          ).changeIncidentStatus(await adminClient(), idCheck.data, nextStatus, parsed.data.by)
+        : await (
+            await import("./local-ledger.server")
+          ).localChangeIncidentStatus(idCheck.data, nextStatus, parsed.data.by);
       if (!result.ok) {
-        const statusCode = result.message.includes("not found") ? 404 : result.message.includes("full") ? 429 : 409;
+        const statusCode = result.message.includes("not found")
+          ? 404
+          : result.message.includes("full")
+            ? 429
+            : 409;
         return jsonResponse(result, statusCode);
       }
       return jsonResponse(result, 200);
     } catch (error) {
       return jsonResponse(
-        { ok: false, message: error instanceof Error ? error.message : "Could not record status change." },
+        {
+          ok: false,
+          message: error instanceof Error ? error.message : "Could not record status change.",
+        },
         500,
+      );
+    }
+  }
+
+  // POST /api/predict — score a custom network flow with the deployed Random Forest.
+  if (pathname === "/api/predict" && request.method === "POST") {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return jsonResponse({ ok: false, message: "Request body must be valid JSON." }, 400);
+    }
+    const parsed = predictPayloadSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return jsonResponse({ ok: false, message: "Invalid flow features payload." }, 400);
+    }
+    try {
+      const { localAnalyzeFlow } = await import("./local-ledger.server");
+      const result = await localAnalyzeFlow(parsed.data);
+      return jsonResponse(result, 200);
+    } catch (error) {
+      return jsonResponse(
+        { ok: false, message: error instanceof Error ? error.message : "Flow analysis failed." },
+        400,
       );
     }
   }

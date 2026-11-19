@@ -14,7 +14,8 @@ export type DetectionEvent = {
   status: IncidentStatus;
 };
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export type LedgerBlock = {
   index: number;
@@ -41,7 +42,16 @@ export type StatusChangeEvent = {
   by: string;
 };
 
-export const INCIDENT_SORTS = ["block_index", "detected_at", "confidence", "severity", "source", "category", "status", "event_id"] as const;
+export const INCIDENT_SORTS = [
+  "block_index",
+  "detected_at",
+  "confidence",
+  "severity",
+  "source",
+  "category",
+  "status",
+  "event_id",
+] as const;
 export type IncidentSort = (typeof INCIDENT_SORTS)[number];
 
 export type BlockPage = { items: LedgerBlock[]; total: number; page: number; pageSize: number };
