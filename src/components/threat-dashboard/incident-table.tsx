@@ -1,27 +1,39 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
-import { Eye, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { filterIncidents, incidentData, type Incident, type Severity } from "./demo-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Severity } from "@/lib/threat/types";
+import type { IncidentRow } from "./incident-rows";
 
 type IncidentTableProps = {
-  searchTerm: string;
+  rows: IncidentRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  demo: boolean;
+  severity: Severity | "All";
+  hasSearch: boolean;
+  onSeverityChange: (severity: Severity | "All") => void;
+  onPageChange: (page: number) => void;
 };
 
-export function IncidentTable({ searchTerm }: IncidentTableProps) {
-  const [severityFilter, setSeverityFilter] = useState<Severity | "All">("All");
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+export function IncidentTable({
+  rows,
+  total,
+  page,
+  pageSize,
+  loading,
+  demo,
+  severity,
+  hasSearch,
+  onSeverityChange,
+  onPageChange,
+}: IncidentTableProps) {
+  const [selectedIncident, setSelectedIncident] = useState<IncidentRow | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
-
-  const filteredIncidents = filterIncidents(incidentData, searchTerm, severityFilter);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const filtered = severity !== "All" || hasSearch;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -36,13 +48,10 @@ export function IncidentTable({ searchTerm }: IncidentTableProps) {
         <div>
           <div className="section-kicker">DETECTION QUEUE</div>
           <h2 id="incidents-title">Recent incidents</h2>
-          <p>Illustrative events for the dashboard preview</p>
+          <p>{demo ? "Offline demo events" : `${total.toLocaleString()} detections recorded on the ledger · newest first`}</p>
         </div>
         <div className="severity-select-wrap">
-          <Select
-            value={severityFilter}
-            onValueChange={(value) => setSeverityFilter(value as Severity | "All")}
-          >
+          <Select value={severity} onValueChange={(value) => onSeverityChange(value as Severity | "All")}>
             <SelectTrigger className="severity-select" aria-label="Filter by severity">
               <SelectValue />
             </SelectTrigger>
@@ -57,55 +66,84 @@ export function IncidentTable({ searchTerm }: IncidentTableProps) {
         </div>
       </div>
 
-      <div className="table-scroll" role="region" aria-label="Recent sample incidents; scroll horizontally to see all columns" tabIndex={0}>
-        <table className="incident-table">
-          <thead>
-            <tr>
-              <th scope="col">Detection</th>
-              <th scope="col">Source</th>
-              <th scope="col">Severity</th>
-              <th scope="col">Confidence</th>
-              <th scope="col">First seen</th>
-              <th scope="col"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredIncidents.map((incident) => (
-              <tr key={incident.id}>
-                <td>
-                  <div className="incident-name-cell">
-                    <span className={`incident-severity-mark mark-${incident.severity.toLowerCase()}`} aria-hidden="true" />
-                    <div>
-                      <strong>{incident.title}</strong>
-                      <span>{incident.id} <span className="table-divider">/</span> {incident.category}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="source-cell">{incident.source}</td>
-                <td><span className={`severity-pill severity-${incident.severity.toLowerCase()}`}>{incident.severity}</span></td>
-                <td><span className="confidence-value">{incident.confidence.toFixed(1)}%</span></td>
-                <td className="time-cell">{incident.firstSeen}</td>
-                <td>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="inspect-button"
-                    type="button"
-                    onClick={() => setSelectedIncident(incident)}
-                    aria-label={`Inspect ${incident.id}`}
-                  >
-                    <Eye size={14} aria-hidden="true" />
-                    <span>Inspect</span>
-                  </Button>
-                </td>
+      {loading ? (
+        <div className="table-skeleton" aria-label="Loading incidents">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span className="skeleton-line" key={i} />
+          ))}
+        </div>
+      ) : (
+        <div className="table-scroll" role="region" aria-label="Recent incidents; scroll horizontally to see all columns" tabIndex={0}>
+          <table className="incident-table">
+            <thead>
+              <tr>
+                <th scope="col">Detection</th>
+                <th scope="col">Source</th>
+                <th scope="col">Severity</th>
+                <th scope="col">Confidence</th>
+                <th scope="col">First seen</th>
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredIncidents.length === 0 ? (
-          <div className="empty-table">No sample incidents match this search.</div>
-        ) : null}
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((incident) => (
+                <tr key={incident.id}>
+                  <td>
+                    <div className="incident-name-cell">
+                      <span className={`incident-severity-mark mark-${incident.severity.toLowerCase()}`} aria-hidden="true" />
+                      <div>
+                        <strong>{incident.title}</strong>
+                        <span>
+                          {incident.id} <span className="table-divider">/</span>{" "}
+                          {incident.blockIndex ? `Block #${incident.blockIndex}` : incident.category}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="source-cell">{incident.source}</td>
+                  <td><span className={`severity-pill severity-${incident.severity.toLowerCase()}`}>{incident.severity}</span></td>
+                  <td><span className="confidence-value">{incident.confidence.toFixed(1)}%</span></td>
+                  <td className="time-cell" title={incident.detectedAt || undefined}>{incident.firstSeen}</td>
+                  <td>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="inspect-button"
+                      type="button"
+                      onClick={() => setSelectedIncident(incident)}
+                      aria-label={`Inspect ${incident.id}`}
+                    >
+                      <Eye size={14} aria-hidden="true" />
+                      <span>Inspect</span>
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length === 0 ? (
+            <div className="empty-table">
+              {filtered ? "No incidents match these filters." : "No detections yet. Run a simulation to score test traffic."}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {!demo && total > pageSize ? (
+        <div className="pagination-bar">
+          <span>
+            Page {page} of {pageCount}
+          </span>
+          <div>
+            <Button variant="ghost" size="sm" className="inspect-button" type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+              <ChevronLeft size={14} aria-hidden="true" /> Newer
+            </Button>
+            <Button variant="ghost" size="sm" className="inspect-button" type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
+              Older <ChevronRight size={14} aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <dialog
         ref={dialogRef}
@@ -119,9 +157,7 @@ export function IncidentTable({ searchTerm }: IncidentTableProps) {
         {selectedIncident ? (
           <div className="dialog-content">
             <div className="dialog-topline">
-              <span className={`severity-pill severity-${selectedIncident.severity.toLowerCase()}`}>
-                {selectedIncident.severity} priority
-              </span>
+              <span className={`severity-pill severity-${selectedIncident.severity.toLowerCase()}`}>{selectedIncident.severity} priority</span>
               <Button variant="ghost" size="icon" className="dialog-close" type="button" onClick={() => dialogRef.current?.close()} aria-label="Close incident details">
                 <X size={18} aria-hidden="true" />
               </Button>
@@ -132,10 +168,14 @@ export function IncidentTable({ searchTerm }: IncidentTableProps) {
             <div className="dialog-facts">
               <div><span>Source</span><strong>{selectedIncident.source}</strong></div>
               <div><span>Model confidence</span><strong>{selectedIncident.confidence.toFixed(1)}%</strong></div>
-              <div><span>First seen</span><strong>{selectedIncident.firstSeen}</strong></div>
-              <div><span>Preview status</span><strong>{selectedIncident.status}</strong></div>
+              <div><span>Detected</span><strong>{selectedIncident.detectedAt ? new Date(selectedIncident.detectedAt).toLocaleString() : selectedIncident.firstSeen}</strong></div>
+              <div><span>Status</span><strong>{selectedIncident.status}</strong></div>
+              {selectedIncident.modelVersion ? <div><span>Model version</span><strong>{selectedIncident.modelVersion}</strong></div> : null}
+              {selectedIncident.hash ? <div><span>Block hash</span><strong>{selectedIncident.hash.slice(0, 10)}…{selectedIncident.hash.slice(-6)}</strong></div> : null}
             </div>
-            <p className="dialog-note">Sample preview only. This event is not connected to a live detector or response workflow.</p>
+            <p className="dialog-note">
+              {demo ? "Offline demo event — the live API could not be reached." : "Stored on the tamper-evident ledger. Use Verify integrity to re-check every block hash."}
+            </p>
           </div>
         ) : null}
       </dialog>

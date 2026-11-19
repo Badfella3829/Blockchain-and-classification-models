@@ -1,6 +1,8 @@
-export type Severity = "Critical" | "High" | "Medium" | "Low";
+// Offline fallback only: shown with a "Demo data" badge when the live API cannot be reached.
+import type { Severity } from "@/lib/threat/types";
+import type { IncidentRow } from "./incident-rows";
 
-export type Incident = {
+type DemoIncident = {
   id: string;
   title: string;
   source: string;
@@ -12,7 +14,7 @@ export type Incident = {
   description: string;
 };
 
-export const incidentData: Incident[] = [
+const demoIncidents: DemoIncident[] = [
   {
     id: "SIG-1042",
     title: "Repeated SSH authentication failures",
@@ -87,18 +89,22 @@ export const incidentData: Incident[] = [
   },
 ];
 
-export function filterIncidents(
-  rows: Incident[],
-  searchTerm: string,
-  severity: Severity | "All",
-) {
+export const incidentData: IncidentRow[] = demoIncidents.map((incident) => ({
+  ...incident,
+  detectedAt: "",
+  blockIndex: null,
+  hash: null,
+  modelVersion: null,
+}));
+
+export function filterIncidents(rows: IncidentRow[], searchTerm: string, severity: Severity | "All") {
   const query = searchTerm.trim().toLowerCase();
   return rows.filter((incident) => {
     const matchesSeverity = severity === "All" || incident.severity === severity;
     const matchesSearch =
       !query ||
-      [incident.id, incident.title, incident.source, incident.category, incident.severity].some(
-        (value) => value.toLowerCase().includes(query),
+      [incident.id, incident.title, incident.source, incident.category, incident.severity].some((value) =>
+        value.toLowerCase().includes(query),
       );
     return matchesSeverity && matchesSearch;
   });
@@ -119,42 +125,15 @@ export const trafficSeries = [
   { time: "22:00", events: 392, threats: 8 },
 ];
 
-export const severitySummary = [
-  { label: "Critical", count: 3, percent: 4, color: "critical" },
-  { label: "High", count: 12, percent: 18, color: "high" },
-  { label: "Medium", count: 31, percent: 46, color: "medium" },
-  { label: "Low", count: 22, percent: 32, color: "low" },
-] as const;
+export const severitySummary: { label: Severity; count: number; percent: number }[] = [
+  { label: "Critical", count: 3, percent: 4 },
+  { label: "High", count: 12, percent: 18 },
+  { label: "Medium", count: 31, percent: 46 },
+  { label: "Low", count: 22, percent: 32 },
+];
 
 export const auditPreview = [
   { id: "BLK-00842", event: "Detection batch recorded", time: "10:42:18", hash: "8f2a…c91d" },
   { id: "BLK-00841", event: "Model score attached", time: "10:39:52", hash: "7bc4…2a60" },
   { id: "BLK-00840", event: "Signal policy updated", time: "10:31:06", hash: "2de9…4f17" },
 ];
-
-export function downloadIncidents(rows: Incident[] = incidentData) {
-  const columns: Array<keyof Incident> = [
-    "id",
-    "title",
-    "source",
-    "category",
-    "severity",
-    "confidence",
-    "firstSeen",
-    "status",
-  ];
-  const csv = [
-    columns.join(","),
-    ...rows.map((row) =>
-      columns
-        .map((column) => `"${String(row[column]).replace(/"/g, '""')}"`)
-        .join(","),
-    ),
-  ].join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "sentinel-preview-incidents.csv";
-  anchor.click();
-  URL.revokeObjectURL(url);
-}

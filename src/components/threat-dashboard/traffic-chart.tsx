@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ChartContainer,
   ChartTooltip,
@@ -15,21 +13,23 @@ import {
   YAxis,
 } from "recharts";
 import { useId } from "react";
-import { trafficSeries } from "./demo-data";
 
 const chartConfig = {
   events: { label: "Events analyzed", color: "var(--chart-1)" },
   threats: { label: "Threat signals", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
-export function TrafficChart() {
+export type TrafficPoint = { time: string; events: number; threats: number };
+
+export function TrafficChart({ data }: { data: TrafficPoint[] }) {
+  const maxThreats = Math.max(4, ...data.map((point) => point.threats));
   const gradientId = `event-fill-${useId().replace(/:/g, "")}`;
 
   return (
     <ChartContainer config={chartConfig} className="traffic-chart">
       <ComposedChart
         accessibilityLayer
-        data={trafficSeries}
+        data={data}
         key="sentinel-traffic-chart"
         margin={{ top: 12, right: 8, left: -18, bottom: 0 }}
       >
@@ -54,7 +54,7 @@ export function TrafficChart() {
           tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
           width={42}
         />
-        <YAxis yAxisId="threats" orientation="right" hide domain={[0, 16]} />
+        <YAxis yAxisId="threats" orientation="right" hide domain={[0, Math.ceil(maxThreats * 1.25)]} />
         <ChartTooltip
           cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
           content={<ChartTooltipContent />}

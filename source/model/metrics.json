@@ -1,0 +1,123 @@
+{
+  "model_version": "rf-20261119080153",
+  "selected_model": "Random Forest",
+  "trained_at": "2026-11-19T08:01:53.732501+00:00",
+  "dataset": "synthetic_training-set.csv",
+  "dataset_kind": "synthetic",
+  "artifact_bytes": 1241451,
+  "feature_importances": [
+    {
+      "feature": "dbytes",
+      "importance": 0.28007
+    },
+    {
+      "feature": "sttl",
+      "importance": 0.18556
+    },
+    {
+      "feature": "dpkts",
+      "importance": 0.142183
+    },
+    {
+      "feature": "dload",
+      "importance": 0.099977
+    },
+    {
+      "feature": "dmean",
+      "importance": 0.092536
+    },
+    {
+      "feature": "dttl",
+      "importance": 0.079018
+    },
+    {
+      "feature": "state",
+      "importance": 0.02456
+    },
+    {
+      "feature": "spkts",
+      "importance": 0.021062
+    },
+    {
+      "feature": "dur",
+      "importance": 0.014162
+    },
+    {
+      "feature": "sload",
+      "importance": 0.014083
+    }
+  ],
+  "evaluation": "official testing set (synthetic_testing-set.csv)",
+  "train_rows": 6000,
+  "test_rows": 2000,
+  "features": [
+    "dur",
+    "proto",
+    "service",
+    "state",
+    "spkts",
+    "dpkts",
+    "sbytes",
+    "dbytes",
+    "rate",
+    "sttl",
+    "dttl",
+    "sload",
+    "dload",
+    "smean",
+    "dmean",
+    "ct_srv_src",
+    "ct_dst_ltm"
+  ],
+  "models": {
+    "Random Forest": {
+      "accuracy": 0.962,
+      "precision": 0.9628,
+      "recall": 0.9681,
+      "f1": 0.9654,
+      "confusion_matrix": [
+        [
+          863,
+          41
+        ],
+        [
+          35,
+          1061
+        ]
+      ]
+    },
+    "Logistic Regression": {
+      "accuracy": 0.9545,
+      "precision": 0.9539,
+      "recall": 0.9635,
+      "f1": 0.9587,
+      "confusion_matrix": [
+        [
+          853,
+          51
+        ],
+        [
+          40,
+          1056
+        ]
+      ]
+    },
+    "Naive Bayes": {
+      "accuracy": 0.939,
+      "precision": 0.9468,
+      "recall": 0.9416,
+      "f1": 0.9442,
+      "confusion_matrix": [
+        [
+          846,
+          58
+        ],
+        [
+          64,
+          1032
+        ]
+      ]
+    }
+  },
+  "web_artifact_bytes": 520438
+}

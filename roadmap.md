@@ -1,4 +1,23 @@
 - [x] Port the uploaded security dashboard into the app's home page and adapt its styling.
-- [x] Preserve the reviewed Python training and blockchain utilities as source files; make their non-live status clear.
-- [x] Verify the dashboard chart, search, severity filter, incident details, CSV export, phone display, and regression tests.
-- [ ] Finish a full production migration and live model verification if a training dataset, model service, and deployment handoff become available.
+- [x] Preserve the reviewed Python training and blockchain utilities as source files.
+- [ ] Python: chain persistence (atomic JSON, detailed verify, lock) + tests
+- [ ] Python: synthetic dataset, official test-set eval, metrics.json, comparison table, web model export, download_dataset.md
+- [ ] Python: FastAPI api.py (predict/incidents/metrics/chain/verify/simulate) + pytest
+- [ ] Web: Cloud tables for chain + predictions; server functions with same API contract; TS model inference
+- [ ] Web: dashboard reads live data (5s refresh, skeletons, error/retry, demo fallback badge, verify integrity, run simulation, real CSV export)
+- [ ] DX: run.sh / dev:all, README, .env.example, .gitignore
+- [ ] Verify: python tests, vitest, simulate -> incidents appear, tamper -> index shown
+- [ ] Brief 2 (stateless-safe): chain in DB with retry on conflict, canonical hash (sort_keys, compact separators), app role SELECT/INSERT only, genesis on first request
+- [ ] Brief 2 (abuse): simulate max 20/call, ~10 calls/min per visitor (DB counters), 5000 block cap, 429 messages
+- [ ] Brief 2 (model): RF <=50 trees, depth <=12, print size + fail >40 MB, parity test on 5 sample inputs
+- [x] Brief 2 (Vercel): user chose dashboard on Lovable + Python API also on Vercel
+- [ ] Brief 3: Vercel Python API in api/index.py + api/_lib (DB via DATABASE_URL, file fallback in dev), requirements.txt deploy-only + requirements-train.txt, vercel.json, .vercelignore, bundle size report
+- [ ] Brief 3: model version label in dashboard; 429 message on rapid simulate; JS/Python same hash test
+- [ ] Brief 4: hash views (#overview/#detections/#audit/#model-health), active nav + aria-current, title per view, back/forward, collapsible mobile sidebar
+- [ ] Brief 4: Overview (cards incl. critical open + chain status, chart, severity, 5 latest + View all)
+- [ ] Brief 4: Detections (search, severity+status filter, sort any column, pagination, detail drawer, status change via appended status_change block, CSV)
+- [ ] Brief 4: Audit ledger (all blocks paged, expandable JSON, copy hash, verify + red highlight + last verified, export JSON)
+- [ ] Brief 4: Model health (version, trained-at, dataset, artifact size, 3-model chart, confusion matrix, top-10 importances, live stats + drift)
+- [ ] Brief 4: top bar search dropdown + Ctrl/Cmd+K, bell unread + mark all read, help dialog tour + shortcuts + README + demo sim, account menu (env badge, model version, theme toggle, settings refresh interval)
+- [ ] Brief 4: Python API endpoints POST /api/incidents/{id}/status and GET /api/model/health
+- [ ] Brief 4: checklist table of every element verified

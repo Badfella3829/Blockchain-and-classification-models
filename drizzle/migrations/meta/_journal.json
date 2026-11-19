@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795074498817,
+      "tag": "0000_create_threat_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795075377224,
+      "tag": "0001_incident_status_view_and_model_stats",
+      "breakpoints": true
+    }
+  ]
+}

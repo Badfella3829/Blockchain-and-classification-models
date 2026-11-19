@@ -7,6 +7,7 @@ type MetricCardProps = {
   trend?: string;
   trendTone?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
+  loading?: boolean;
   accent: "cyan" | "coral" | "violet" | "green";
 };
 
@@ -17,6 +18,7 @@ export function MetricCard({
   trend,
   trendTone = "neutral",
   icon: Icon,
+  loading = false,
   accent,
 }: MetricCardProps) {
   const TrendIcon = trendTone === "negative" ? ArrowDownRight : ArrowUpRight;
@@ -36,7 +38,11 @@ export function MetricCard({
       </div>
       <p className="metric-label">{label}</p>
       <div className="metric-value-row">
-        <strong className="metric-value">{value}</strong>
+        {loading ? (
+          <span className="skeleton-line" style={{ width: 90, height: 30 }} aria-label="Loading" />
+        ) : (
+          <strong className="metric-value">{value}</strong>
+        )}
       </div>
       <p className="metric-note">{note}</p>
     </article>
